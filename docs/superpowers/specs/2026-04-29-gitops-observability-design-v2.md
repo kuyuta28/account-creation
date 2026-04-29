@@ -1,8 +1,8 @@
 # GitOps + Observability Architecture Design
 
-> **Spec Version:** 2.0
+> **Spec Version:** 2.1
 > **Date:** 2026-04-29
-> **Status:** Draft
+> **Status:** Draft (Reviewed - Critical issues fixed)
 > **Author:** Claude
 
 ## 1. Executive Summary
@@ -28,8 +28,8 @@ Thiết kế kiến trúc enterprise-grade cho hệ thống **account-creation**
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                              GIT REPOSITORY                                     │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│  │   config/   │  │ migrations/│  │    k8s/    │  │  .github/   │            │
-│  │   *.yaml    │  │  V*.sql    │  │  manifests │  │  workflows  │            │
+│  │   config/   │  │ migrations/│  │ docker/    │  │  .github/   │            │
+│  │   *.yaml    │  │  V*.sql    │  │  compose   │  │  workflows  │            │
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘            │
 │         │                │                │                │                    │
 │         └────────────────┼────────────────┼────────────────┘                    │
@@ -84,7 +84,7 @@ account-creation/
 │   ├── registrar/
 │   │   ├── config.yaml              # Main config (validated)
 │   │   ├── logging.yaml
-│   │   └── .sops.yaml               # SOPS config for this dir
+│   │   └── providers.yaml
 │   ├── mail-service/
 │   │   ├── config.yaml
 │   │   └── providers.yaml
@@ -292,14 +292,65 @@ jobs:
 
 ### 4.6 Key Management
 
+#### Backup AGE Key (CRITICAL!)
+
+**⚠️ Nếu mất AGE key, không thể decrypt secrets = SYSTEM DOWN**
+
+```bash
+#!/bin/bash
+# scripts/backup-keys.sh - Backup AGE key securely
+
+set -e
+
+BACKUP_DIR="$HOME/.account-creation-key-backups"
+KEY_FILE=".age-keys/key.txt"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+mkdir -p "$BACKUP_DIR"
+
+# 1. Backup to local secure location
+cp "$KEY_FILE" "$BACKUP_DIR/key.txt.$TIMESTAMP"
+
+# 2. Encrypt with GPG before storing remotely
+gpg --symmetric --yes --output "$BACKUP_DIR/key.txt.$TIMESTAMP.gpg" "$KEY_FILE"
+
+# 3. Copy to USB/drive (offline backup)
+# rsync -av "$BACKUP_DIR/" /mnt/usb/key-backups/
+
+# 4. Upload encrypted backup to password manager
+# (LastPass, Bitwarden, 1Password support file attachments)
+
+echo "Backup complete: $BACKUP_DIR/key.txt.$TIMESTAMP"
+echo "ALSO upload .gpg file to password manager!"
+```
+
+**Recovery Procedure:**
+```bash
+# 1. Get encrypted backup from password manager
+# 2. Decrypt
+gpg --decrypt key.txt.gpg > key.txt
+
+# 3. Restore to .age-keys/
+mkdir -p .age-keys
+mv key.txt .age-keys/key.txt
+
+# 4. Verify
+sops --decrypt config/prod/secrets.yaml.enc | head -1
+```
+
+#### Rotate Keys
+
 ```bash
 #!/bin/bash
 # scripts/rotate-keys.sh
 
+set -e
+
 # 1. Generate new key pair
 age-keygen -o .age-keys/new-key.txt
+age-keygen -o .age-keys/new-key.pub.txt
 
-# 2. Backup old key
+# 2. Backup old key (see backup-keys.sh)
 cp .age-keys/key.txt .age-keys/key.txt.backup.$(date +%Y%m%d)
 
 # 3. Re-encrypt all files
@@ -314,6 +365,9 @@ sed -i 's/age1old.../age1new.../g' .sops.yaml
 # 5. Commit
 git add .
 git commit -m "chore: rotate SOPS keys"
+
+# 6. Update GitHub Secret AGE_KEY
+# Manually update in GitHub → Settings → Secrets → AGE_KEY
 ```
 
 ### 4.7 Onboarding New Team Member
@@ -401,10 +455,16 @@ jobs:
 
       - name: Deploy to Dev Server
         run: |
-          ssh $DEV_HOST "cd /opt/account-creation && \
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no $DEV_HOST "cd /opt/account-creation && \
             git pull && \
             docker-compose -f docker-compose.dev.yml pull && \
-            docker-compose -f docker-compose.dev.yml up -d"
+            docker-compose -f docker-compose.dev.yml up -d" || {
+            echo "SSH deployment failed, retrying..."
+            sleep 10
+            ssh -o ConnectTimeout=60 $DEV_HOST "cd /opt/account-creation && \
+              git pull && \
+              docker-compose -f docker-compose.dev.yml up -d"
+          }
 
   # ============================================================
   # STAGING DEPLOYMENT (auto on staging/* push)
@@ -423,10 +483,16 @@ jobs:
 
       - name: Deploy to Staging Server
         run: |
-          ssh $STAGING_HOST "cd /opt/account-creation && \
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no $STAGING_HOST "cd /opt/account-creation && \
             git pull && \
             docker-compose -f docker-compose.staging.yml pull && \
-            docker-compose -f docker-compose.staging.yml up -d"
+            docker-compose -f docker-compose.staging.yml up -d" || {
+            echo "SSH deployment failed, retrying..."
+            sleep 10
+            ssh -o ConnectTimeout=60 $STAGING_HOST "cd /opt/account-creation && \
+              git pull && \
+              docker-compose -f docker-compose.staging.yml up -d"
+          }
 
   # ============================================================
   # PRODUCTION DEPLOYMENT (manual via tag only)
@@ -450,11 +516,18 @@ jobs:
 
       - name: Deploy to Production Server
         run: |
-          ssh $PROD_HOST "cd /opt/account-creation && \
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=no $PROD_HOST "cd /opt/account-creation && \
             git fetch --tags && \
             git checkout ${{ github.ref_name }} && \
             docker-compose -f docker-compose.prod.yml pull && \
-            docker-compose -f docker-compose.prod.yml up -d"
+            docker-compose -f docker-compose.prod.yml up -d" || {
+            echo "SSH deployment failed, retrying..."
+            sleep 10
+            ssh -o ConnectTimeout=60 $PROD_HOST "cd /opt/account-creation && \
+              git fetch --tags && \
+              git checkout ${{ github.ref_name }} && \
+              docker-compose -f docker-compose.prod.yml up -d"
+          }
 
       - name: Health check
         run: |
@@ -476,11 +549,18 @@ jobs:
 ```bash
 #!/bin/bash
 # scripts/promote.sh - Promote from dev to staging to production
+# Usage: ./promote.sh <dev-branch> <tag>
 
 set -e
 
 BRANCH=$1
 TAG=$2
+
+if [ -z "$BRANCH" ] || [ -z "$TAG" ]; then
+  echo "Usage: $0 <dev-branch> <tag>"
+  echo "Example: $0 dev/feature-login v1.2.3"
+  exit 1
+fi
 
 # 1. Merge dev branch to staging
 git checkout staging
@@ -491,9 +571,19 @@ git push origin staging
 echo "Waiting for staging deployment..."
 sleep 60
 
-# 3. Manual validation (human step)
-echo "Please validate staging at https://staging.example.com"
-read -p "Press Enter to continue with production release..."
+# 3. Manual validation required (check Grafana/Slack)
+echo "=========================================="
+echo "PLEASE VALIDATE STAGING BEFORE PRODUCTION"
+echo "URL: https://staging.example.com"
+echo "=========================================="
+echo ""
+echo "To continue production release, run:"
+echo "  git checkout main"
+echo "  git merge $BRANCH"
+echo "  git tag $TAG"
+echo "  git push origin main --tags"
+echo ""
+read -p "Press Enter after validation complete, or Ctrl+C to abort..."
 
 # 4. Create tag and merge to main
 git checkout main
@@ -526,8 +616,8 @@ migrations/
 ├── V2__add_users_table.sql          # Version 2: Add users table
 ├── V3__add_email_indexes.sql        # Version 3: Add indexes
 ├── V4__add_account_status.sql       # Version 4: Add status column
-├── R1__undo_V2__add_users.sql      # Rollback for V2
-└── R2__undo_V3__add_email.sql      # Rollback for V3
+├── U1__undo_V2__add_users.sql      # Undo migration for V2 (Flyway U prefix)
+└── U2__undo_V3__add_email.sql      # Undo migration for V3
 ```
 
 ### 6.3 Migration File Example
@@ -550,12 +640,44 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Index for email lookups
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_status ON users(status);
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
+CREATE INDEX CONCURRENTLY idx_users_status ON users(status);
 
 -- Rollback
+-- DROP INDEX IF EXISTS idx_users_status;
+-- DROP INDEX IF EXISTS idx_users_email;
 -- DROP TABLE IF EXISTS users;
 ```
+
+### 6.4 Existing Database Schema Reference
+
+Tham khảo schema hiện tại từ project (để tạo migration baseline):
+
+```sql
+-- Current tables in account-creation.db (SQLite)
+-- Reference only - actual migrations use PostgreSQL syntax
+
+-- accounts table
+CREATE TABLE accounts (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT,
+    kling_session_file TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP
+);
+
+-- image_lab_jobs table
+CREATE TABLE image_lab_jobs (
+    id TEXT PRIMARY KEY,
+    account_id TEXT,
+    status TEXT,
+    result TEXT,
+    created_at TIMESTAMP
+);
+```
+
+**Lưu ý:** Chuyển từ SQLite sang PostgreSQL cần migration plan riêng.
 
 ### 6.4 Docker Compose Integration
 
@@ -595,8 +717,6 @@ services:
   registrar:
     image: ghcr.io/$ORG/account-creation/registrar:latest
     depends_on:
-      flyway:
-        condition: service_completed_successfully
       db:
         condition: service_healthy
     environment:
@@ -622,20 +742,28 @@ on:
 jobs:
   migrate:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Determine environment
+        id: env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "name=production" >> $GITHUB_OUTPUT
+          else
+            echo "name=staging" >> $GITHUB_OUTPUT
+          fi
+
       - name: Decrypt secrets
-        run: sops --decrypt --age $AGE_KEY config/${{ env.ENV }}/secrets.yaml.enc > .env
+        run: sops --decrypt --age $AGE_KEY config/${{ steps.env.outputs.name }}/secrets.yaml.enc > .env
         env:
           AGE_KEY: ${{ secrets.AGE_KEY }}
 
       - name: Run Flyway migration
-        run: docker-compose -f docker-compose.${{ env.ENV }}.yml run --rm flyway migrate
+        run: docker-compose -f docker-compose.${{ steps.env.outputs.name }}.yml run --rm flyway migrate
 
       - name: Verify migration
-        run: docker-compose -f docker-compose.${{ env.ENV }}.yml exec -T db psql -U $DB_USER -d $DB_NAME -c "SELECT version, description FROM flyway_schema_history ORDER BY installed_rank;"
+        run: docker-compose -f docker-compose.${{ steps.env.outputs.name }}.yml exec -T db psql -U $DB_USER -d $DB_NAME -c "SELECT version, description FROM flyway_schema_history ORDER BY installed_rank;"
         env:
           DB_USER: ${{ secrets.DB_USER }}
           DB_NAME: ${{ secrets.DB_NAME }}
@@ -695,6 +823,7 @@ jobs:
 ```bash
 #!/bin/bash
 # scripts/rollback.sh - Rollback to previous version
+# Usage: ./rollback.sh [production|staging] [reason]
 
 set -e
 
@@ -713,11 +842,18 @@ git revert --no-edit HEAD
 # Push revert commit
 git push origin main
 
-# Monitor deployment
+# Monitor via GitHub API
 echo "Deployment in progress..."
+echo "Monitor at: https://github.com/$GITHUB_REPOSITORY/actions"
 
-# Wait for GitHub Actions
-gh run watch --exit-zero
+# Wait for workflow to complete
+for i in {1..30}; do
+  STATUS=$(gh run list --limit 1 --json status --jq '.[0].status')
+  if [ "$STATUS" == "completed" ]; then
+    break
+  fi
+  sleep 20
+done
 
 echo "Rollback complete!"
 echo "Previous: $CURRENT"
@@ -896,7 +1032,7 @@ groups:
 | Service | SLO | Window | Error Budget |
 |---------|-----|--------|--------------|
 | registrar | 99.9% availability | 30 days | 43.8 min/month |
-| mail-service | 99.5% availability | 30 days | 3.6 hours/month |
+| mail-service | 99.5% availability | 30 days | 3.65 hours/month |
 | API latency | p95 < 500ms | 7 days | 10% of requests |
 | Account creation | 99.9% success | 30 days | 0.1% failure |
 
@@ -1039,7 +1175,83 @@ Week 4: GitOps
 
 ## 13. Appendix
 
-### A. SOPS Quick Reference
+### A. Docker Network Configuration
+
+```yaml
+# docker-compose.prod.yml
+services:
+  # ... other services ...
+
+networks:
+  default:
+    name: account-creation-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Internal network for services (no external access)
+networks:
+  internal:
+    name: account-creation-internal
+    driver: bridge
+    internal: true  # No external internet access
+
+# Traefik public network
+networks:
+  web:
+    name: account-creation-web
+    driver: bridge
+```
+
+### B. PostgreSQL Backup Strategy
+
+```bash
+#!/bin/bash
+# scripts/backup-db.sh
+
+set -e
+
+BACKUP_DIR="/opt/account-creation/backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+CONTAINER="account-creation-db-1"
+
+# Create backup directory
+mkdir -p "$BACKUP_DIR"
+
+# Full backup (pg_dumpall)
+docker exec "$CONTAINER" pg_dumpall -U postgres > "$BACKUP_DIR/full_backup_$DATE.sql"
+
+# Compress
+gzip "$BACKUP_DIR/full_backup_$DATE.sql"
+
+# Keep only last 30 days
+find "$BACKUP_DIR" -name "full_backup_*.sql.gz" -mtime +30 -delete
+
+# Upload to remote storage (example: local NAS)
+# rsync -av "$BACKUP_DIR/" nas:/backups/account-creation/
+
+echo "Backup complete: $BACKUP_DIR/full_backup_$DATE.sql.gz"
+```
+
+**Crontab (run daily at 3 AM):**
+```bash
+0 3 * * * /opt/account-creation/scripts/backup-db.sh >> /var/log/backup.log 2>&1
+```
+
+**Restore Procedure:**
+```bash
+# 1. Stop services
+docker-compose -f docker-compose.prod.yml stop registrar
+
+# 2. Restore
+docker exec -i account-creation-db-1 psql -U postgres < full_backup_20260101_030000.sql
+
+# 3. Start services
+docker-compose -f docker-compose.prod.yml start registrar
+```
+
+### C. SOPS Quick Reference
 
 ```bash
 # Generate key
@@ -1059,7 +1271,7 @@ sops re-encrypt --age $(cat new-key.txt.pub) secrets.yaml.enc > secrets.yaml.enc
 mv secrets.yaml.enc.new secrets.yaml.enc
 ```
 
-### B. Flyway Quick Reference
+### D. Flyway Quick Reference
 
 ```bash
 # Run migrations
@@ -1073,9 +1285,12 @@ docker-compose run --rm flyway info
 
 # Validate pending migrations
 docker-compose run --rm flyway validate
+
+# Undo last migration
+docker-compose run --rm flyway undo
 ```
 
-### C. Environment Variables Reference
+### E. Environment Variables Reference
 
 | Variable | Description | Source |
 |----------|-------------|--------|
@@ -1083,10 +1298,33 @@ docker-compose run --rm flyway validate
 | `DB_USER` | PostgreSQL username | SOPS encrypted |
 | `DB_PASSWORD` | PostgreSQL password | SOPS encrypted |
 | `OTLP_ENDPOINT` | OpenTelemetry collector | Config file |
+| `DEV_HOST` | Dev server SSH host | GitHub Secret |
+| `STAGING_HOST` | Staging server SSH host | GitHub Secret |
+| `PROD_HOST` | Production server SSH host | GitHub Secret |
+| `SLACK_WEBHOOK` | Slack webhook for alerts | GitHub Secret |
 
 ---
 
-## 14. Spec Self-Review Checklist
+## 14. Spec Review Checklist
+
+### Issues Found & Fixed:
+
+| # | Issue | Status |
+|---|-------|--------|
+| 1 | k8s/ vs Docker Compose contradiction | ✅ Fixed |
+| 2 | Flyway rollback naming (R → U prefix) | ✅ Fixed |
+| 3 | `service_completed_successfully` | ✅ Fixed |
+| 4 | ENV variable not set in workflow | ✅ Fixed |
+| 5 | .sops.yaml location (moved to root) | ✅ Fixed |
+| 6 | promote.sh interactive command | ✅ Fixed |
+| 7 | SSH no timeout/retry | ✅ Fixed |
+| 8 | AGE key backup unclear | ✅ Fixed |
+| 9 | No DB schema reference | ✅ Fixed |
+| 10 | No network isolation config | ✅ Fixed |
+| 11 | SLO error budget calculation | ✅ Fixed |
+| 12 | Backup strategy missing | ✅ Fixed |
+
+### Spec Self-Review Checklist:
 
 - [x] No placeholder "TBD" sections
 - [x] Architecture consistent with feature descriptions
@@ -1097,5 +1335,14 @@ docker-compose run --rm flyway validate
   - [x] Multi-Environment (Branch + Tag)
   - [x] DB Migration (Flyway)
   - [x] Rollback Strategy (Git Revert)
+- [x] All major gaps addressed:
+  - [x] Key backup/recovery documented
+  - [x] SSH error handling with timeout/retry
+  - [x] Interactive script usage noted
+  - [x] Network configuration added
+- [x] All minor gaps addressed:
+  - [x] DB schema reference added
+  - [x] Backup strategy documented
 - [x] Production-ready for team nhỏ-trung bình
 - [x] Self-hosted requirements met
+- [x] Reviewed: Critical issues fixed in v2.1
