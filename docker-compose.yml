@@ -1,0 +1,143 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ccs-postgres
+    environment:
+      POSTGRES_USER: ccs
+      POSTGRES_PASSWORD: ccs_secret
+      POSTGRES_DB: account_creator
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - account-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ccs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - account-net
+    restart: unless-stopped
+
+  registrar:
+    build:
+      context: .
+      dockerfile: registrar/Dockerfile
+    container_name: registrar
+    environment:
+      - REGISTRAR_HOST=0.0.0.0
+      - REGISTRAR_PORT=8709
+      - APP_ENV=prod
+      - DATABASE_URL=postgresql+asyncpg://ccs:ccs_secret@postgres:5432/account_creator
+    ports:
+      - "127.0.0.1:8709:8709"
+    volumes:
+      - ./registrar/data:/app/data
+      - ./registrar/logs:/app/logs
+      - ./registrar/debug:/app/debug
+      - ./registrar/screenshots:/app/screenshots
+      - ./registrar/config:/app/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - account-net
+    restart: unless-stopped
+
+  mail-service:
+    build:
+      context: .
+      dockerfile: mail-service/Dockerfile
+    container_name: mail-service
+    environment:
+      - MAIL_PORT=8701
+    ports:
+      - "127.0.0.1:8701:8701"
+    volumes:
+      - ./mail-service/logs:/app/logs
+      - ./mail-service/data:/app/data
+      - ./mail-service/config:/app/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - account-net
+    restart: unless-stopped
+
+  aa-proxy:
+    build:
+      context: .
+      dockerfile: aa-proxy/Dockerfile
+    container_name: aa-proxy
+    environment:
+      - AA_PORT=8702
+    ports:
+      - "127.0.0.1:8702:8702"
+    volumes:
+      - ./aa-proxy/logs:/app/logs
+      - ./aa-proxy/config:/app/config
+    networks:
+      - account-net
+    restart: unless-stopped
+
+  tts-proxy:
+    build:
+      context: .
+      dockerfile: tts-proxy/Dockerfile
+    container_name: tts-proxy
+    environment:
+      - TTS_PORT=8700
+    ports:
+      - "127.0.0.1:8700:8700"
+    volumes:
+      - ./tts-proxy/logs:/app/logs
+      - ./tts-proxy/config:/app/config
+    networks:
+      - account-net
+    restart: unless-stopped
+
+  any-auto-register:
+    build:
+      context: ./any-auto-register
+      dockerfile: Dockerfile
+    container_name: any-auto-register
+    init: true
+    environment:
+      - PORT=8708
+      - SOLVER_PORT=8703
+      - LOCAL_SOLVER_URL=http://127.0.0.1:8703
+    ports:
+      - "127.0.0.1:8708:8708"
+      - "127.0.0.1:8703:8703"
+    volumes:
+      - ./any-auto-register/logs:/app/logs
+    shm_size: "1gb"
+    networks:
+      - account-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  account-net:
+    name: account-net
+    driver: bridge
