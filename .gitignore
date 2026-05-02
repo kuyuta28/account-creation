@@ -1,0 +1,27 @@
+# Root orchestration repo only.
+# Service source code lives in independent repos and should not appear as root changes.
+aa-proxy/
+any-auto-register/
+common/
+desktop-ui/
+mail-service/
+registrar/
+tts-proxy/
+content-vault/
+
+# Local runtime data and backups
+data/
+*.db
+*.db.bak
+*.db.*.bak
+
+# Local tooling / editor state
+.claude/
+
+# Keep orchestration and docs visible
+!.github/
+!docs/
+!traefik/
+!README.md
+!docker-compose.yml
+!CLAUDE.md
