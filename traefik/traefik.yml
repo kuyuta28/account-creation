@@ -1,0 +1,69 @@
+# Static configuration
+api:
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+
+log:
+  level: DEBUG
+
+providers:
+  file:
+    filename: /etc/traefik/traefik.yml
+    watch: true
+
+# Dynamic configuration
+http:
+  middlewares:
+    strip-mail:
+      stripPrefix:
+        prefixes:
+          - "/mail"
+    strip-tts:
+      stripPrefix:
+        prefixes:
+          - "/tts"
+    strip-aa:
+      stripPrefix:
+        prefixes:
+          - "/aa"
+
+  routers:
+    mail:
+      rule: "PathPrefix(`/mail`)"
+      service: mail-service
+      middlewares:
+        - strip-mail
+    tts:
+      rule: "PathPrefix(`/tts`)"
+      service: tts-proxy
+      middlewares:
+        - strip-tts
+    aa:
+      rule: "PathPrefix(`/aa`)"
+      service: aa-proxy
+      middlewares:
+        - strip-aa
+    api:
+      rule: "PathPrefix(`/api`)"
+      service: registrar
+
+  services:
+    mail-service:
+      loadBalancer:
+        servers:
+          - url: "http://mail-service:8701"
+    tts-proxy:
+      loadBalancer:
+        servers:
+          - url: "http://tts-proxy:8700"
+    aa-proxy:
+      loadBalancer:
+        servers:
+          - url: "http://aa-proxy:8702"
+    registrar:
+      loadBalancer:
+        servers:
+          - url: "http://registrar:8709"

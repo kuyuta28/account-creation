@@ -16,6 +16,7 @@ data/
 *.db.*.bak
 
 # Local tooling / editor state
+.agents/
 .claude/
 
 # Keep orchestration and docs visible
