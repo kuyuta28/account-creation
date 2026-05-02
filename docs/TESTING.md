@@ -52,6 +52,7 @@ Current critical contract tests already introduced during remediation:
 - `common/tests/contracts/test_no_reverse_imports.py`
 - `common/tests/contracts/test_context_boundaries.py`
 - `registrar/tests/smoke/test_startup_contract.py`
+- `registrar/tests/integration/test_migration_bootstrap.py`
 - `desktop-ui/src/__tests__/config.contract.test.ts`
 
 ## Local Verification Commands
@@ -74,6 +75,7 @@ pytest tests -v
 
 ```bash
 pytest tests -v
+bootstrap-postgres --database-url "$DATABASE_URL"
 ```
 
 ### `mail-service`
@@ -119,6 +121,7 @@ If a change touches routes, ports, or datastore ownership, the root validator mu
 - PostgreSQL is the canonical runtime database for production and staging.
 - SQLite is allowed only for isolated tests, transitional tooling, or legacy conversion flows.
 - Migration/bootstrap verification belongs with the service repo that owns the runtime behavior, not the root orchestration repo.
+- `registrar` now owns the canonical PostgreSQL bootstrap command and integration test for the shared account schema.
 
 ## Release Evidence
 
