@@ -83,3 +83,7 @@ These files duplicate a large amount of config loading/parsing logic and are alr
 3. Raise minimum smoke/config test floor for the weaker services.
 4. Remove path hacks and reverse imports.
 5. Consolidate config loading and database truth model.
+
+## Closure Note
+
+This baseline is now paired with [`enterprise-exit-review-2026-05-02.md`](/D:/business/account-creation/docs/superpowers/audits/enterprise-exit-review-2026-05-02.md), which records the post-remediation state for the root orchestration repo and the coordinated service-repo verification evidence.

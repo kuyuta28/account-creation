@@ -82,6 +82,8 @@ These are the prefixes enforced by service code today:
 ### Canonical runtime in root Compose
 
 - PostgreSQL is the database actually provisioned by the root `docker-compose.yml`.
+- PostgreSQL is the canonical database for production and staging.
+- SQLite is allowed only for isolated tests, local transitional tooling, or legacy conversion flows.
 
 ### Transitional reality still present in service code/docs
 
@@ -103,6 +105,12 @@ curl http://localhost:8701/api/health
 curl http://localhost:8702/api/health
 curl http://localhost:8700/api/health
 ```
+
+## Verification Ownership
+
+- Runtime truth in the root repo is validated by `.github/scripts/validate_runtime_truth.py`.
+- Executable service tests live in the owning service repositories, not in root Git.
+- The root repo is responsible for orchestration/docs consistency, not for impersonating service-local CI.
 
 ## Docker Network
 

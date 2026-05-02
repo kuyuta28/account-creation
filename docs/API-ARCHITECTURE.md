@@ -80,7 +80,13 @@ export const AAR_BASE_URL = "http://localhost:8708";
 The TTS and AAR clients must talk to their own service origins directly.
 They must not be routed through `registrar`.
 
-## 5. Known Drift Areas
+## 5. Validation Ownership
+
+- `desktop-ui` and backend services are validated in their own repositories.
+- The root orchestration repo validates only the documented runtime contract and root Compose truth.
+- Cross-repo consistency is enforced through shared contract docs plus service-local tests.
+
+## 6. Known Drift Areas
 
 The following are currently not stable enough to be treated as final architecture:
 
@@ -89,7 +95,7 @@ The following are currently not stable enough to be treated as final architectur
 - storage ownership language in older docs
 - AAR integration boundary
 
-## 6. Verification Checklist
+## 7. Verification Checklist
 
 Any API/routing change is incomplete unless all of these are updated together:
 
