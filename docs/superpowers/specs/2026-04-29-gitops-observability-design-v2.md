@@ -145,32 +145,30 @@ account-creation/
 
 ### 4.2 Workflow
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        SOPS + AGE WORKFLOW                                │
-│                                                                          │
-│  1. GENERATE KEY (one-time setup)                                         │
-│     $ age-keygen -o .age-keys/key.txt                                     │
-│     $ age-keygen -o .age-keys/key.pub.txt                                │
-│                                                                          │
-│  2. ENCRYPT SECRETS (dev machine)                                         │
-│     $ sops --encrypt --age $(cat .age-keys/key.pub.txt) \                 │
-│       config/secrets.yaml > config/secrets.yaml.enc                      │
-│                                                                          │
-│  3. COMMIT TO GIT (safe!)                                                 │
-│     $ git add config/secrets.yaml.enc                                    │
-│     $ git commit -m "chore: add encrypted config"                        │
-│                                                                          │
-│  4. CI/CD DECRYPT (on deploy)                                             │
-│     $ sops --decrypt --age $AGE_SECRET_KEY \                             │
-│       config/secrets.yaml.enc > .env                                     │
-│     $ docker-compose up                                                   │
-│                                                                          │
-│  5. ROTATE KEY (when needed)                                              │
-│     $ age-keygen -o new-key.txt                                          │
-│     $ sops re-encrypt --age $(cat new-key.pub.txt) config/               │
-│     $ git commit -m "chore: re-encrypt secrets with new key"             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```text
+1. Generate key (one-time setup)
+   $ age-keygen -o .age-keys/key.txt
+   $ age-keygen -y .age-keys/key.txt > .age-keys/key.pub.txt
+
+2. Encrypt secrets (dev machine)
+   $ sops --encrypt --age "$(cat .age-keys/key.pub.txt)" \
+     config/secrets.yaml > config/secrets.yaml.enc
+
+3. Commit to git (safe)
+   $ git add config/secrets.yaml.enc
+   $ git commit -m "chore: add encrypted config"
+
+4. CI/CD decrypt (on deploy)
+   $ printf '%s' "$AGE_SECRET_KEY" > /tmp/age.key
+   $ SOPS_AGE_KEY_FILE=/tmp/age.key \
+     sops --decrypt config/secrets.yaml.enc > .env
+   $ docker-compose up
+
+5. Rotate key (when needed)
+   $ age-keygen -o new-key.txt
+   $ age-keygen -y new-key.txt > new-key.pub.txt
+   $ sops re-encrypt --age "$(cat new-key.pub.txt)" config/
+   $ git commit -m "chore: re-encrypt secrets with new key"
 ```
 
 ### 4.3 SOPS Configuration
@@ -180,22 +178,24 @@ account-creation/
 version: "3.8"
 
 creation_rules:
-  - path_regex: config/.*\.yaml\.enc
-    encrypted_regex: "^(API_KEY|SECRET|PASSWORD|TOKEN|CREDENTIALS)$"
-    age: >-
-      age1abc123...  # Team public key
-
-  # Staging: multiple keys allowed
-  - path_regex: config/staging/.*\.yaml\.enc
-    encrypted_regex: "^(API_KEY|SECRET|PASSWORD|TOKEN|CREDENTIALS)$"
-    age: >-
-      age1dev...age1ops...
-
   # Production: ops team only
   - path_regex: config/prod/.*\.yaml\.enc
-    encrypted_regex: "^(API_KEY|SECRET|PASSWORD|TOKEN|CREDENTIALS)$"
+    encrypted_regex: ".*(API_KEY|SECRET|PASSWORD|TOKEN|CREDENTIALS)$"
     age: >-
       age1ops...
+
+  # Staging: shared between dev + ops
+  - path_regex: config/staging/.*\.yaml\.enc
+    encrypted_regex: ".*(API_KEY|SECRET|PASSWORD|TOKEN|CREDENTIALS)$"
+    age: >-
+      age1dev...
+      age1ops...
+
+  # Default: dev/local/shared examples
+  - path_regex: config/.*\.yaml\.enc
+    encrypted_regex: ".*(API_KEY|SECRET|PASSWORD|TOKEN|CREDENTIALS)$"
+    age: >-
+      age1abc123...  # Team public key
 ```
 
 ### 4.4 Secrets Structure
@@ -335,7 +335,7 @@ mkdir -p .age-keys
 mv key.txt .age-keys/key.txt
 
 # 4. Verify
-sops --decrypt config/prod/secrets.yaml.enc | head -1
+SOPS_AGE_KEY_FILE=.age-keys/key.txt sops --decrypt config/prod/secrets.yaml.enc | head -1
 ```
 
 #### Rotate Keys
@@ -348,7 +348,7 @@ set -e
 
 # 1. Generate new key pair
 age-keygen -o .age-keys/new-key.txt
-age-keygen -o .age-keys/new-key.pub.txt
+age-keygen -y .age-keys/new-key.txt > .age-keys/new-key.pub.txt
 
 # 2. Backup old key (see backup-keys.sh)
 cp .age-keys/key.txt .age-keys/key.txt.backup.$(date +%Y%m%d)
@@ -449,7 +449,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Decrypt secrets
-        run: sops --decrypt --age $AGE_KEY config/dev/secrets.yaml.enc > .env
+        run: |
+          printf '%s' "$AGE_KEY" > /tmp/age.key
+          SOPS_AGE_KEY_FILE=/tmp/age.key sops --decrypt config/dev/secrets.yaml.enc > .env
         env:
           AGE_KEY: ${{ secrets.AGE_KEY }}
 
@@ -477,7 +479,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Decrypt secrets
-        run: sops --decrypt --age $AGE_KEY config/staging/secrets.yaml.enc > .env
+        run: |
+          printf '%s' "$AGE_KEY" > /tmp/age.key
+          SOPS_AGE_KEY_FILE=/tmp/age.key sops --decrypt config/staging/secrets.yaml.enc > .env
         env:
           AGE_KEY: ${{ secrets.AGE_KEY }}
 
@@ -507,7 +511,9 @@ jobs:
           ref: ${{ github.ref_name }}
 
       - name: Decrypt production secrets
-        run: sops --decrypt --age $AGE_KEY config/prod/secrets.yaml.enc > .env
+        run: |
+          printf '%s' "$AGE_KEY" > /tmp/age.key
+          SOPS_AGE_KEY_FILE=/tmp/age.key sops --decrypt config/prod/secrets.yaml.enc > .env
         env:
           AGE_KEY: ${{ secrets.AGE_KEY }}
 
@@ -606,7 +612,7 @@ echo "Production release $TAG triggered"
 | Self-hosted | ✅ No external service required |
 | Docker Compose | ✅ Official Docker image available |
 | Production-ready | ✅ Battle-tested since 2010 |
-| Rollback | ✅ Versioned migrations with downgrades |
+| Rollback | ✅ Versioned migrations with forward-fix + restore workflow |
 
 ### 6.2 Migration File Structure
 
@@ -616,9 +622,14 @@ migrations/
 ├── V2__add_users_table.sql          # Version 2: Add users table
 ├── V3__add_email_indexes.sql        # Version 3: Add indexes
 ├── V4__add_account_status.sql       # Version 4: Add status column
-├── U1__undo_V2__add_users.sql      # Undo migration for V2 (Flyway U prefix)
-└── U2__undo_V3__add_email.sql      # Undo migration for V3
+├── V5__drop_legacy_users_table.sql  # Forward fix migration
+└── V6__recreate_email_index.sql     # Compensating migration if needed
 ```
+
+**Rollback policy:** dùng forward-only migrations. Khi migration đã được apply:
+- rollback application/config bằng `git revert` nếu cần
+- sửa schema bằng migration bù `V_next__...`
+- restore từ backup nếu có destructive/data-corruption change
 
 ### 6.3 Migration File Example
 
@@ -640,8 +651,8 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Index for email lookups
-CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
-CREATE INDEX CONCURRENTLY idx_users_status ON users(status);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_status ON users(status);
 
 -- Rollback
 -- DROP INDEX IF EXISTS idx_users_status;
@@ -755,7 +766,10 @@ jobs:
           fi
 
       - name: Decrypt secrets
-        run: sops --decrypt --age $AGE_KEY config/${{ steps.env.outputs.name }}/secrets.yaml.enc > .env
+        run: |
+          printf '%s' "$AGE_KEY" > /tmp/age.key
+          SOPS_AGE_KEY_FILE=/tmp/age.key \
+            sops --decrypt config/${{ steps.env.outputs.name }}/secrets.yaml.enc > .env
         env:
           AGE_KEY: ${{ secrets.AGE_KEY }}
 
@@ -772,10 +786,10 @@ jobs:
 ### 6.6 Migration Best Practices
 
 1. **Never modify committed migrations** — Always create new migration
-2. **Always include rollback** — Comment at bottom of each file
+2. **Document compensation path** — Note how to roll forward or restore from backup
 3. **Test on staging first** — Migrations run automatically on staging before prod
 4. **Backward compatible** — New code must work with old schema
-5. **Large table migrations** — Use `CONCURRENTLY` for indexes, batch inserts
+5. **Large table migrations** — Use separate non-transactional migrations for `CONCURRENTLY`, batch inserts
 
 ---
 
@@ -974,10 +988,10 @@ scrape_configs:
   - job_name: 'account-creation'
     static_configs:
       - targets:
-          - 'registrar:8000'
-          - 'mail-service:8000'
-          - 'aa-proxy:8000'
-          - 'tts-proxy:8000'
+          - 'registrar:8709'
+          - 'mail-service:8701'
+          - 'aa-proxy:8702'
+          - 'tts-proxy:8700'
         labels:
           group: 'services'
 
@@ -1189,16 +1203,10 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/16
-
-# Internal network for services (no external access)
-networks:
   internal:
     name: account-creation-internal
     driver: bridge
     internal: true  # No external internet access
-
-# Traefik public network
-networks:
   web:
     name: account-creation-web
     driver: bridge
@@ -1257,16 +1265,20 @@ docker-compose -f docker-compose.prod.yml start registrar
 # Generate key
 age-keygen -o key.txt
 
+# Derive recipient from private key
+age-keygen -y key.txt > key.txt.pub
+
 # Encrypt file
 sops --encrypt --age $(cat key.txt.pub) secrets.yaml > secrets.yaml.enc
 
 # Decrypt file
-sops --decrypt --age $(cat key.txt) secrets.yaml.enc > secrets.yaml
+SOPS_AGE_KEY_FILE=key.txt sops --decrypt secrets.yaml.enc > secrets.yaml
 
 # Update existing file
 sops update-keys secrets.yaml.enc
 
 # Re-encrypt with new key
+age-keygen -y new-key.txt > new-key.txt.pub
 sops re-encrypt --age $(cat new-key.txt.pub) secrets.yaml.enc > secrets.yaml.enc.new
 mv secrets.yaml.enc.new secrets.yaml.enc
 ```
@@ -1286,8 +1298,8 @@ docker-compose run --rm flyway info
 # Validate pending migrations
 docker-compose run --rm flyway validate
 
-# Undo last migration
-docker-compose run --rm flyway undo
+# Apply latest compensating migration
+docker-compose run --rm flyway migrate
 ```
 
 ### E. Environment Variables Reference
