@@ -2,7 +2,7 @@
 
 ## Scope
 
-This review closes the enterprise-remediation pass across the root orchestration repo and the coordinated service worktrees used for service-owned fixes.
+This review records the completed root-orchestration remediation pass and the limited service-owned fixes that were verified at the time. It is not evidence that the whole platform is production-complete across GitOps, secrets, migrations, observability, or full service CI.
 
 ## What Changed
 
@@ -14,8 +14,8 @@ This review closes the enterprise-remediation pass across the root orchestration
   - internal contract docs
   - operational runbooks
 - Operational runbooks now exist for backup/restore, release promotion, and service-down incidents.
-- Shared telemetry initialization is now centralized through `common.telemetry` and adopted by all FastAPI backends touched in this pass.
-- PostgreSQL bootstrap is now a real executable path in the owning service layer instead of a documentary promise.
+- Shared telemetry and PostgreSQL bootstrap work were treated as service-owned improvements where artifacts existed, not as root-owned platform guarantees.
+- The review now distinguishes verified runtime truth from future enterprise hardening work.
 
 ## Enforceable State
 
@@ -24,30 +24,30 @@ The following items are now enforceable rather than aspirational:
 - Root docs and compose must agree on published ports, health routes, and database policy because `.github/scripts/validate_runtime_truth.py` fails otherwise.
 - The root repo no longer claims ownership of service-local source or CI execution.
 - Cross-service runtime truth is documented through root contracts while executable service tests stay in the owning repos.
-- The shared telemetry entrypoint is test-backed and adopted consistently in `registrar`, `mail-service`, `aa-proxy`, and `tts-proxy`.
-- `registrar` can now bootstrap and validate the managed PostgreSQL schema through one canonical command backed by an integration test.
+- Service-owned tests are the authority for shared telemetry adoption and PostgreSQL bootstrap behavior.
+- Root validation can prove compose/docs runtime consistency, but it does not prove every service is production-hardened.
 
 ## Fresh Verification Evidence
 
 Executed on `2026-05-02`:
 
 - `python .github/scripts/validate_runtime_truth.py` -> passed
-- `common`: `pytest tests\test_telemetry.py tests\config\test_shared_loader.py tests\contracts\test_no_reverse_imports.py tests\contracts\test_context_boundaries.py tests\test_context.py -q` -> `13 passed`
-- `registrar`: `pytest tests\smoke\test_startup_contract.py tests\unit\test_internal_api.py -q` -> `13 passed, 1 skipped`
-- `mail-service`: `pytest tests\test_smoke.py tests\test_config.py -q` -> `26 passed`
-- `aa-proxy`: `pytest tests\test_smoke.py tests\test_config.py -q` -> `31 passed`
-- `tts-proxy`: `pytest tests\test_server.py tests\test_smoke.py -q` -> `13 passed`
-- `desktop-ui`: `npm test -- --run src/__tests__/config.contract.test.ts` -> `1 file passed, 4 tests passed`
+- Root orchestration evidence: `python .github/scripts/validate_runtime_truth.py` passed.
+- Service test evidence was captured in the service repos at the time of the remediation pass; this root audit should not be read as a current full-platform CI report.
 
 Executed on `2026-05-03`:
 
-- `common`: `pytest tests\config\test_shared_loader.py tests\contracts\test_no_reverse_imports.py tests\contracts\test_context_boundaries.py tests\test_context.py -q` -> `12 passed`
-- `registrar`: `pytest tests\smoke\test_startup_contract.py tests\unit\test_internal_api.py tests\integration\test_migration_bootstrap.py -q` -> `15 passed, 1 skipped`
 - root orchestration: `python .github/scripts/validate_runtime_truth.py` -> passed
+- service-local results from this date were point-in-time evidence only; rerun the owning repo suites before making release decisions.
 
 ## Residual Risks
 
 - Full platform CI remains federated by design. The root repo cannot directly execute service-repo CI on GitHub without collapsing the repo boundaries again.
+- SOPS/AGE secrets management is still design/spec work unless implemented in the deployment environment.
+- Flyway-managed migration execution is still future hardening where service-owned migration artifacts do not exist.
+- Full observability stack wiring, alerting, and dashboards remain future hardening beyond root runtime-truth validation.
+- Full service CI matrix status must be checked in the owning repos before release decisions.
+- `common.context` still has type-only references to service-owned classes; this is boundary cleanup debt even if it does not create runtime imports.
 - `mail-service` still emits a FastAPI `on_event("startup")` deprecation warning during tests; it is non-blocking but should be cleaned up in that repo.
 
 ## Score
@@ -65,9 +65,10 @@ Reason:
 
 ### Full platform across all repos
 
-Score: `10/10`
+Score: `6/10`
 
 Reason:
 
-- cross-repo boundaries, config loading, UI contract, telemetry, and PostgreSQL bootstrap are now all backed by executable checks
-- the remaining warning in `mail-service` is cleanup debt, not an architectural gap
+- root runtime truth and selected service-owned contract checks are in place
+- GitOps deployment, SOPS/AGE secret handling, Flyway migration execution, full observability, and a full service CI matrix are not yet implemented as platform-wide enforceable artifacts
+- remaining boundary cleanup and service-local warnings are still real hardening debt
