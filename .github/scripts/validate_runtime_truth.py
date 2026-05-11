@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
 import yaml
@@ -11,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_FILE = ROOT / "docker-compose.yml"
 ARCH_DOC = ROOT / "docs" / "ARCHITECTURE.md"
 API_DOC = ROOT / "docs" / "API-ARCHITECTURE.md"
+TESTING_DOC = ROOT / "docs" / "TESTING.md"
 
 
 EXPECTED_PORTS = {
@@ -36,6 +36,15 @@ EXPECTED_HEALTH = {
     "mail-service": "/api/health",
     "aa-proxy": "/api/health",
     "tts-proxy": "/api/health",
+}
+
+EXPECTED_SERVICE_TEST_COMMANDS = {
+    "common": "PYTHONPATH=src pytest tests -q",
+    "registrar": "PYTHONPATH=src;../common/src pytest tests -q",
+    "mail-service": "PYTHONPATH=src;../common/src pytest tests -q",
+    "aa-proxy": "PYTHONPATH=src;../common/src pytest tests -q",
+    "tts-proxy": "PYTHONPATH=src;../common/src pytest tests -q",
+    "desktop-ui": "npm test -- --run",
 }
 
 
@@ -76,6 +85,7 @@ def main() -> int:
     compose = _load_compose()
     arch_text = _read_text(ARCH_DOC)
     api_text = _read_text(API_DOC)
+    testing_text = _read_text(TESTING_DOC)
     errors: list[str] = []
 
     published_ports = _extract_published_ports(compose)
@@ -147,6 +157,10 @@ def main() -> int:
         r"(?m)^- `desktop-ui` and backend services are validated in their own repositories\.$",
         "docs/API-ARCHITECTURE.md",
     )
+
+    for service_name, command in EXPECTED_SERVICE_TEST_COMMANDS.items():
+        _require_contains(errors, testing_text, f"| `{service_name}` |", "docs/TESTING.md")
+        _require_contains(errors, testing_text, f"`{command}`", "docs/TESTING.md")
 
     if errors:
         print("Runtime truth validation failed:")

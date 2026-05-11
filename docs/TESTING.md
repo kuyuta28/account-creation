@@ -65,41 +65,21 @@ Run these from the owning repo or worktree.
 python .github/scripts/validate_runtime_truth.py
 ```
 
-### `common`
+| Repo | Required local command | Owner |
+|------|------------------------|-------|
+| `common` | `PYTHONPATH=src pytest tests -q` | common repo |
+| `registrar` | `PYTHONPATH=src;../common/src pytest tests -q` | registrar repo |
+| `mail-service` | `PYTHONPATH=src;../common/src pytest tests -q` | mail-service repo |
+| `aa-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` | aa-proxy repo |
+| `tts-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` | tts-proxy repo |
+| `desktop-ui` | `npm test -- --run` | desktop-ui repo |
+
+Run service commands from the owning repo or worktree. On PowerShell, set `$env:PYTHONPATH` before `pytest` if inline environment assignment is not available.
+
+`registrar` additionally owns PostgreSQL bootstrap verification:
 
 ```bash
-pytest tests -v
-```
-
-### `registrar`
-
-```bash
-pytest tests -v
 bootstrap-postgres --database-url "$DATABASE_URL"
-```
-
-### `mail-service`
-
-```bash
-pytest tests -v
-```
-
-### `aa-proxy`
-
-```bash
-pytest tests -v
-```
-
-### `tts-proxy`
-
-```bash
-pytest tests -v
-```
-
-### `desktop-ui`
-
-```bash
-npm test -- --run
 ```
 
 ## Runtime-Truth Checks
