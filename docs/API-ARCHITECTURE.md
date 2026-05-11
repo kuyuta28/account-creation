@@ -57,7 +57,6 @@ Traefik is published from the root Compose on:
 - dashboard: `http://localhost:8080/`
 
 This document does not assert final Traefik path routing until those routes are verified and normalized during remediation.
-Older `localhost:8888` documentation should be treated as stale unless explicitly marked transitional.
 
 ## 3. Cross-Service Contract Reality
 

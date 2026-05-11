@@ -174,6 +174,14 @@ def main() -> int:
         _require_contains(errors, api_text, f"export const {name} = \"{value}\";", "docs/API-ARCHITECTURE.md")
         _require_contains(errors, desktop_config_text, f"export const {name} = \"{value}\";", "desktop-ui/src/config.ts")
 
+    for label, text in {
+        "docs/ARCHITECTURE.md": arch_text,
+        "docs/API-ARCHITECTURE.md": api_text,
+        "docs/TESTING.md": testing_text,
+    }.items():
+        if "localhost:8888" in text or "127.0.0.1:8888" in text:
+            errors.append(f"{label} contains stale 8888 runtime URL")
+
     if errors:
         print("Runtime truth validation failed:")
         for error in errors:
