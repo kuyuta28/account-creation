@@ -24,6 +24,7 @@ The following items are now enforceable rather than aspirational:
 - Root docs and compose must agree on published ports, health routes, and database policy because `.github/scripts/validate_runtime_truth.py` fails otherwise.
 - The root repo no longer claims ownership of service-local source or CI execution.
 - Cross-service runtime truth is documented through root contracts while executable service tests stay in the owning repos.
+- Root validation now requires the documented critical contract artifacts to exist: common reverse-import guard, registrar startup smoke, and desktop runtime config contract.
 - Service-owned tests are the authority for shared telemetry adoption and PostgreSQL bootstrap behavior.
 - Root validation can prove compose/docs runtime consistency, but it does not prove every service is production-hardened.
 
@@ -39,6 +40,13 @@ Executed on `2026-05-03`:
 
 - root orchestration: `python .github/scripts/validate_runtime_truth.py` -> passed
 - service-local results from this date were point-in-time evidence only; rerun the owning repo suites before making release decisions.
+
+Executed on `2026-05-11`:
+
+- root orchestration: `python .github/scripts/validate_runtime_truth.py` -> passed after contract artifact enforcement was expanded.
+- `common`: `pytest common/tests/contracts/test_no_reverse_imports.py common/tests/test_context.py -q` -> passed with `PYTHONPATH=common/src`.
+- `registrar`: `pytest registrar/tests/smoke/test_startup_contract.py registrar/tests/smoke/test_imports.py -q` -> passed with `PYTHONPATH=registrar;common/src`.
+- `desktop-ui`: `npm test -- --run src/__tests__/config.contract.test.ts` -> passed.
 
 ## Residual Risks
 
