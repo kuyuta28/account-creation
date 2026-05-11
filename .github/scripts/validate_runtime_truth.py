@@ -11,6 +11,7 @@ COMPOSE_FILE = ROOT / "docker-compose.yml"
 ARCH_DOC = ROOT / "docs" / "ARCHITECTURE.md"
 API_DOC = ROOT / "docs" / "API-ARCHITECTURE.md"
 TESTING_DOC = ROOT / "docs" / "TESTING.md"
+DESKTOP_CONFIG = ROOT / "desktop-ui" / "src" / "config.ts"
 
 
 EXPECTED_PORTS = {
@@ -45,6 +46,12 @@ EXPECTED_SERVICE_TEST_COMMANDS = {
     "aa-proxy": "PYTHONPATH=src;../common/src pytest tests -q",
     "tts-proxy": "PYTHONPATH=src;../common/src pytest tests -q",
     "desktop-ui": "npm test -- --run",
+}
+
+EXPECTED_DESKTOP_CONFIG = {
+    "API_BASE_URL": "http://localhost:8709/api/v1",
+    "TTS_BASE_URL": "http://localhost:8700",
+    "AAR_BASE_URL": "http://localhost:8702",
 }
 
 
@@ -86,6 +93,7 @@ def main() -> int:
     arch_text = _read_text(ARCH_DOC)
     api_text = _read_text(API_DOC)
     testing_text = _read_text(TESTING_DOC)
+    desktop_config_text = _read_text(DESKTOP_CONFIG)
     errors: list[str] = []
 
     published_ports = _extract_published_ports(compose)
@@ -161,6 +169,10 @@ def main() -> int:
     for service_name, command in EXPECTED_SERVICE_TEST_COMMANDS.items():
         _require_contains(errors, testing_text, f"| `{service_name}` |", "docs/TESTING.md")
         _require_contains(errors, testing_text, f"`{command}`", "docs/TESTING.md")
+
+    for name, value in EXPECTED_DESKTOP_CONFIG.items():
+        _require_contains(errors, api_text, f"export const {name} = \"{value}\";", "docs/API-ARCHITECTURE.md")
+        _require_contains(errors, desktop_config_text, f"export const {name} = \"{value}\";", "desktop-ui/src/config.ts")
 
     if errors:
         print("Runtime truth validation failed:")

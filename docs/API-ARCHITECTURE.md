@@ -67,18 +67,19 @@ Current cross-service helper code points at:
 
 That internal contract is used by shared client code and must be formalized in a dedicated contract document during remediation.
 
-## 4. Desktop UI Contract Drift
+## 4. Desktop UI Runtime Contract
 
-Current desktop runtime config must resolve to:
+Current desktop runtime config resolves to:
 
 ```typescript
 export const API_BASE_URL = "http://localhost:8709/api/v1";
 export const TTS_BASE_URL = "http://localhost:8700";
-export const AAR_BASE_URL = "http://localhost:8708";
+export const AAR_BASE_URL = "http://localhost:8702";
 ```
 
 The TTS and AAR clients must talk to their own service origins directly.
 They must not be routed through `registrar`.
+`any-auto-register` remains available separately at `http://localhost:8708`.
 
 ## 5. Validation Ownership
 
@@ -91,7 +92,6 @@ They must not be routed through `registrar`.
 The following are currently not stable enough to be treated as final architecture:
 
 - Traefik public routing contract
-- UI-generated base URLs drifting from backend ports
 - storage ownership language in older docs
 - AAR integration boundary
 

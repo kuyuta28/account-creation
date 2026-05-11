@@ -93,7 +93,7 @@ These are the prefixes enforced by service code today:
 ## Frontend Runtime Surface
 
 `desktop-ui` is a separate repository/workspace and must be validated against backend routing truth independently.
-At the time of this audit, its generated config does not match the older `8888`-based documentation, which is one of the remediation targets.
+Its generated config now points at the root runtime ports for registrar, TTS, and AA service origins.
 
 ## Development Access
 
@@ -124,4 +124,4 @@ The primary gaps to close are:
 2. mixed database story
 3. path-hack startup dependencies
 4. multi-repo boundary ambiguity
-5. UI/backend contract drift
+5. GitOps/secrets/migration/observability hardening
