@@ -50,9 +50,8 @@ Every backend service must maintain:
 Current critical contract tests already introduced during remediation:
 
 - `common/tests/contracts/test_no_reverse_imports.py`
-- `common/tests/contracts/test_context_boundaries.py`
+- `common/tests/test_context.py`
 - `registrar/tests/smoke/test_startup_contract.py`
-- `registrar/tests/integration/test_migration_bootstrap.py`
 - `desktop-ui/src/__tests__/config.contract.test.ts`
 
 ## Local Verification Commands
