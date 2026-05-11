@@ -47,8 +47,7 @@ Executed on `2026-05-03`:
 - Flyway-managed migration execution is still future hardening where service-owned migration artifacts do not exist.
 - Full observability stack wiring, alerting, and dashboards remain future hardening beyond root runtime-truth validation.
 - Full service CI matrix status must be checked in the owning repos before release decisions.
-- `common.context` still has type-only references to service-owned classes; this is boundary cleanup debt even if it does not create runtime imports.
-- `mail-service` still emits a FastAPI `on_event("startup")` deprecation warning during tests; it is non-blocking but should be cleaned up in that repo.
+- `common.context` reverse type references and the `mail-service` FastAPI `on_event("startup")` warning were cleaned up after this review; keep checking service-owned tests before release decisions.
 
 ## Score
 
@@ -71,4 +70,4 @@ Reason:
 
 - root runtime truth and selected service-owned contract checks are in place
 - GitOps deployment, SOPS/AGE secret handling, Flyway migration execution, full observability, and a full service CI matrix are not yet implemented as platform-wide enforceable artifacts
-- remaining boundary cleanup and service-local warnings are still real hardening debt
+- remaining platform-wide GitOps/secrets/migration/observability/CI work is still real hardening debt
