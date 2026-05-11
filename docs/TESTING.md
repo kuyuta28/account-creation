@@ -65,6 +65,8 @@ Run these from the owning repo or worktree.
 python .github/scripts/validate_runtime_truth.py
 ```
 
+The root repo deliberately ignores service worktrees in `pytest.ini`; a plain root-level `pytest` must not be used as the platform test gate.
+
 | Repo | Required local command | Owner |
 |------|------------------------|-------|
 | `common` | `PYTHONPATH=src pytest tests -q` | common repo |
