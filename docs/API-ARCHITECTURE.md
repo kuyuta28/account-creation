@@ -92,7 +92,6 @@ The following are currently not stable enough to be treated as final architectur
 
 - Traefik public routing contract
 - storage ownership language in older docs
-- AAR integration boundary
 
 ## 7. Verification Checklist
 

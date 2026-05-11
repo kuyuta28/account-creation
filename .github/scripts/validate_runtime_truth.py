@@ -174,6 +174,9 @@ def main() -> int:
         _require_contains(errors, api_text, f"export const {name} = \"{value}\";", "docs/API-ARCHITECTURE.md")
         _require_contains(errors, desktop_config_text, f"export const {name} = \"{value}\";", "desktop-ui/src/config.ts")
 
+    _require_contains(errors, api_text, "`AAR_BASE_URL` means `any-auto-register`", "docs/API-ARCHITECTURE.md")
+    _require_contains(errors, api_text, "aa-proxy` at `http://localhost:8702`", "docs/API-ARCHITECTURE.md")
+
     for label, text in {
         "docs/ARCHITECTURE.md": arch_text,
         "docs/API-ARCHITECTURE.md": api_text,
