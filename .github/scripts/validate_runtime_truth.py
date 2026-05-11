@@ -57,6 +57,7 @@ EXPECTED_DESKTOP_CONFIG = {
 
 EXPECTED_CONTRACT_ARTIFACTS = (
     ROOT / "common" / "tests" / "contracts" / "test_no_reverse_imports.py",
+    ROOT / "common" / "tests" / "test_context.py",
     ROOT / "registrar" / "tests" / "smoke" / "test_startup_contract.py",
     ROOT / "desktop-ui" / "src" / "__tests__" / "config.contract.test.ts",
 )
