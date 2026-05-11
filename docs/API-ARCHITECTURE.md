@@ -91,7 +91,6 @@ They must not be routed through `registrar`.
 The following are currently not stable enough to be treated as final architecture:
 
 - Traefik public routing contract
-- storage ownership language in older docs
 
 ## 7. Verification Checklist
 

@@ -184,6 +184,14 @@ def main() -> int:
     }.items():
         if "localhost:8888" in text or "127.0.0.1:8888" in text:
             errors.append(f"{label} contains stale 8888 runtime URL")
+        for stale_storage_phrase in (
+            "accounts.db as primary",
+            "mail.db as primary",
+            "accounts.db and mail.db as primary",
+            "SQLite is the canonical database",
+        ):
+            if stale_storage_phrase in text:
+                errors.append(f"{label} contains stale storage wording: {stale_storage_phrase}")
 
     if errors:
         print("Runtime truth validation failed:")

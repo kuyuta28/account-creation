@@ -85,10 +85,10 @@ These are the prefixes enforced by service code today:
 - PostgreSQL is the canonical database for production and staging.
 - SQLite is allowed only for isolated tests, local transitional tooling, or legacy conversion flows.
 
-### Transitional reality still present in service code/docs
+### Legacy SQLite references
 
-- Some service code and comments still reference SQLite files such as `accounts.db` and `mail.db`.
-- Those references are transitional architecture debt and must not be treated as long-term runtime truth.
+- References to SQLite files such as `accounts.db` and `mail.db` are legacy/test/migration references only.
+- They must not be described as primary production or staging stores.
 
 ## Frontend Runtime Surface
 
@@ -120,8 +120,8 @@ All root-compose services share the `account-net` bridge network.
 
 The primary gaps to close are:
 
-1. runtime docs drift
-2. mixed database story
-3. path-hack startup dependencies
+1. Traefik public routing contract
+2. service-local config duplication
+3. full service CI execution across repository boundaries
 4. multi-repo boundary ambiguity
 5. GitOps/secrets/migration/observability hardening
