@@ -51,7 +51,7 @@ EXPECTED_SERVICE_TEST_COMMANDS = {
 EXPECTED_DESKTOP_CONFIG = {
     "API_BASE_URL": "http://localhost:8709/api/v1",
     "TTS_BASE_URL": "http://localhost:8700",
-    "AAR_BASE_URL": "http://localhost:8702",
+    "AAR_BASE_URL": "http://localhost:8708",
 }
 
 

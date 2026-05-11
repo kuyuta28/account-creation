@@ -73,12 +73,12 @@ Current desktop runtime config resolves to:
 ```typescript
 export const API_BASE_URL = "http://localhost:8709/api/v1";
 export const TTS_BASE_URL = "http://localhost:8700";
-export const AAR_BASE_URL = "http://localhost:8702";
+export const AAR_BASE_URL = "http://localhost:8708";
 ```
 
 The TTS and AAR clients must talk to their own service origins directly.
 They must not be routed through `registrar`.
-`any-auto-register` remains available separately at `http://localhost:8708`.
+`AAR_BASE_URL` means `any-auto-register`; the Artificial Analysis proxy remains `aa-proxy` at `http://localhost:8702`.
 
 ## 5. Validation Ownership
 
