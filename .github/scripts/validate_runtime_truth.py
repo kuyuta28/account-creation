@@ -56,6 +56,7 @@ EXPECTED_DESKTOP_CONFIG = {
 
 EXPECTED_CONTRACT_ARTIFACTS = (
     ROOT / "common" / "tests" / "contracts" / "test_no_reverse_imports.py",
+    ROOT / "registrar" / "tests" / "smoke" / "test_startup_contract.py",
 )
 
 
