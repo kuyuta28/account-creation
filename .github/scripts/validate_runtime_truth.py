@@ -8,6 +8,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_FILE = ROOT / "docker-compose.yml"
+PYTEST_INI = ROOT / "pytest.ini"
 ARCH_DOC = ROOT / "docs" / "ARCHITECTURE.md"
 API_DOC = ROOT / "docs" / "API-ARCHITECTURE.md"
 TESTING_DOC = ROOT / "docs" / "TESTING.md"
@@ -103,6 +104,7 @@ def main() -> int:
     testing_text = _read_text(TESTING_DOC)
     internal_api_contract_text = _read_text(INTERNAL_API_CONTRACT)
     desktop_config_text = _read_text(DESKTOP_CONFIG)
+    pytest_ini_text = _read_text(PYTEST_INI)
     errors: list[str] = []
 
     published_ports = _extract_published_ports(compose)
@@ -178,6 +180,12 @@ def main() -> int:
     for service_name, command in EXPECTED_SERVICE_TEST_COMMANDS.items():
         _require_contains(errors, testing_text, f"| `{service_name}` |", "docs/TESTING.md")
         _require_contains(errors, testing_text, f"`{command}`", "docs/TESTING.md")
+        if service_name != "desktop-ui":
+            _require_contains(errors, pytest_ini_text, f"--ignore={service_name}", "pytest.ini")
+            _require_contains(errors, pytest_ini_text, service_name, "pytest.ini")
+
+    _require_contains(errors, pytest_ini_text, "--ignore=desktop-ui", "pytest.ini")
+    _require_contains(errors, pytest_ini_text, "--ignore=any-auto-register", "pytest.ini")
 
     for artifact in EXPECTED_CONTRACT_ARTIFACTS:
         if not artifact.exists():
