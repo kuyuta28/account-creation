@@ -11,6 +11,7 @@ COMPOSE_FILE = ROOT / "docker-compose.yml"
 ARCH_DOC = ROOT / "docs" / "ARCHITECTURE.md"
 API_DOC = ROOT / "docs" / "API-ARCHITECTURE.md"
 TESTING_DOC = ROOT / "docs" / "TESTING.md"
+INTERNAL_API_CONTRACT = ROOT / "docs" / "superpowers" / "contracts" / "internal-api.md"
 DESKTOP_CONFIG = ROOT / "desktop-ui" / "src" / "config.ts"
 
 
@@ -99,6 +100,7 @@ def main() -> int:
     arch_text = _read_text(ARCH_DOC)
     api_text = _read_text(API_DOC)
     testing_text = _read_text(TESTING_DOC)
+    internal_api_contract_text = _read_text(INTERNAL_API_CONTRACT)
     desktop_config_text = _read_text(DESKTOP_CONFIG)
     errors: list[str] = []
 
@@ -188,6 +190,12 @@ def main() -> int:
 
     _require_contains(errors, api_text, "`AAR_BASE_URL` means `any-auto-register`", "docs/API-ARCHITECTURE.md")
     _require_contains(errors, api_text, "aa-proxy` at `http://localhost:8702`", "docs/API-ARCHITECTURE.md")
+    _require_contains(errors, api_text, "docs/superpowers/contracts/internal-api.md", "docs/API-ARCHITECTURE.md")
+    _require_contains(errors, internal_api_contract_text, "Required header: `X-Internal-Key`", "docs/superpowers/contracts/internal-api.md")
+    _require_contains(errors, internal_api_contract_text, "GET /api/v1/internal/accounts", "docs/superpowers/contracts/internal-api.md")
+
+    if "must be formalized in a dedicated contract document" in api_text:
+        errors.append("docs/API-ARCHITECTURE.md still describes internal API contract as unformalized")
 
     for label, text in {
         "docs/ARCHITECTURE.md": arch_text,

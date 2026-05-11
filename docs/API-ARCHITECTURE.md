@@ -64,7 +64,8 @@ Current cross-service helper code points at:
 
 - `REGISTRAR_URL=http://registrar:8709`
 
-That internal contract is used by shared client code and must be formalized in a dedicated contract document during remediation.
+The supported internal account boundary is documented in `docs/superpowers/contracts/internal-api.md`.
+First-party services must use that HTTP contract instead of importing registrar storage/database modules directly.
 
 ## 4. Desktop UI Runtime Contract
 
