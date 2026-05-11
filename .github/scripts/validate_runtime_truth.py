@@ -54,6 +54,10 @@ EXPECTED_DESKTOP_CONFIG = {
     "AAR_BASE_URL": "http://localhost:8708",
 }
 
+EXPECTED_CONTRACT_ARTIFACTS = (
+    ROOT / "common" / "tests" / "contracts" / "test_no_reverse_imports.py",
+)
+
 
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
@@ -169,6 +173,12 @@ def main() -> int:
     for service_name, command in EXPECTED_SERVICE_TEST_COMMANDS.items():
         _require_contains(errors, testing_text, f"| `{service_name}` |", "docs/TESTING.md")
         _require_contains(errors, testing_text, f"`{command}`", "docs/TESTING.md")
+
+    for artifact in EXPECTED_CONTRACT_ARTIFACTS:
+        if not artifact.exists():
+            errors.append(f"Missing expected contract artifact: {artifact.relative_to(ROOT)}")
+        else:
+            _require_contains(errors, testing_text, str(artifact.relative_to(ROOT)).replace("\\", "/"), "docs/TESTING.md")
 
     for name, value in EXPECTED_DESKTOP_CONFIG.items():
         _require_contains(errors, api_text, f"export const {name} = \"{value}\";", "docs/API-ARCHITECTURE.md")
