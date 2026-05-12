@@ -195,6 +195,9 @@ def main() -> int:
     _require_contains(errors, enterprise_standards_text, "PostgreSQL là runtime truth", "docs/ENTERPRISE-STANDARDS.md")
     _require_contains(errors, enterprise_standards_text, "SQLite chỉ còn dành cho", "docs/ENTERPRISE-STANDARDS.md")
     _require_contains(errors, enterprise_standards_text, "legacy SQLite fixtures only", "docs/ENTERPRISE-STANDARDS.md")
+    for envelope_field in ('"success"', '"data"', '"error"', '"meta"', '"request_id"'):
+        _require_contains(errors, enterprise_standards_text, envelope_field, "docs/ENTERPRISE-STANDARDS.md")
+        _require_contains(errors, api_text, envelope_field, "docs/API-ARCHITECTURE.md")
 
     for service_name, command in EXPECTED_SERVICE_TEST_COMMANDS.items():
         _require_contains(errors, testing_text, f"| `{service_name}` |", "docs/TESTING.md")

@@ -67,7 +67,25 @@ Current cross-service helper code points at:
 The supported internal account boundary is documented in `docs/superpowers/contracts/internal-api.md`.
 First-party services must use that HTTP contract instead of importing registrar storage/database modules directly.
 
-## 4. Desktop UI Runtime Contract
+## 4. Response Envelope
+
+Successful first-party API responses use the standard envelope shape from `docs/ENTERPRISE-STANDARDS.md`:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null,
+  "meta": {
+    "request_id": "uuid",
+    "ts": "2026-04-03T06:37:09Z"
+  }
+}
+```
+
+Router-level auth and not-found failures may return framework-native error bodies; clients must treat HTTP status as authoritative.
+
+## 5. Desktop UI Runtime Contract
 
 Current desktop runtime config resolves to:
 
@@ -81,19 +99,19 @@ The TTS and AAR clients must talk to their own service origins directly.
 They must not be routed through `registrar`.
 `AAR_BASE_URL` means `any-auto-register`; the Artificial Analysis proxy remains `aa-proxy` at `http://localhost:8702`.
 
-## 5. Validation Ownership
+## 6. Validation Ownership
 
 - `desktop-ui` and backend services are validated in their own repositories.
 - The root orchestration repo validates only the documented runtime contract and root Compose truth.
 - Cross-repo consistency is enforced through shared contract docs plus service-local tests.
 
-## 6. Known Drift Areas
+## 7. Known Drift Areas
 
 The following are currently not stable enough to be treated as final architecture:
 
 - Traefik public routing contract
 
-## 7. Verification Checklist
+## 8. Verification Checklist
 
 Any API/routing change is incomplete unless all of these are updated together:
 
