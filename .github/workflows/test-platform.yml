@@ -1,4 +1,4 @@
-name: Platform Orchestration Checks
+name: Root Orchestration Contract Checks
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   pull_request:
 
 jobs:
-  orchestration-repo-contract:
+  root-orchestration-contract:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
