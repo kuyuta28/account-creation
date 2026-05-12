@@ -86,7 +86,7 @@ The root repo deliberately ignores service worktrees in `pytest.ini`; a plain ro
 
 Run service commands from the owning repo or worktree. On PowerShell, set `$env:PYTHONPATH` before `pytest` if inline environment assignment is not available.
 
-`registrar` additionally owns PostgreSQL bootstrap verification, but this checkout does not currently include a checked-in `bootstrap-postgres` command artifact. Treat that as migration hardening debt until the owning repo adds the executable command and test.
+`registrar` additionally owns PostgreSQL bootstrap verification. This checkout includes `registrar/tests/smoke/test_postgres_bootstrap_contract.py` as a local-only `DATABASE_URL` smoke artifact, but it still does not include a checked-in `bootstrap-postgres` command artifact.
 
 ## Runtime-Truth Checks
 
@@ -107,7 +107,7 @@ If a change touches routes, ports, or datastore ownership, the root validator mu
 - PostgreSQL is the canonical runtime database for production and staging.
 - SQLite is allowed only for isolated tests, transitional tooling, or legacy conversion flows.
 - Migration/bootstrap verification belongs with the service repo that owns the runtime behavior, not the root orchestration repo.
-- `registrar` must own the canonical PostgreSQL bootstrap command and integration test once those artifacts are checked in.
+- `registrar` owns a local-only PostgreSQL bootstrap smoke artifact; a canonical executable bootstrap command remains migration hardening debt until checked in.
 
 ## Release Evidence
 
