@@ -71,6 +71,7 @@ Current critical contract tests already introduced during remediation:
 - `desktop-ui/src/__tests__/config.contract.test.ts`
 - `desktop-ui/src/__tests__/api.client.test.ts`
 - `desktop-ui/src/__tests__/App.test.tsx`
+- `desktop-ui/src/__tests__/ConfigPage.test.tsx`
 
 ## Local Verification Commands
 
