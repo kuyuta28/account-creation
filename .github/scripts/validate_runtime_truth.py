@@ -220,6 +220,8 @@ def main() -> int:
 
     if "must be formalized in a dedicated contract document" in api_text:
         errors.append("docs/API-ARCHITECTURE.md still describes internal API contract as unformalized")
+    if "bootstrap-postgres --database-url" in testing_text:
+        errors.append("docs/TESTING.md references bootstrap-postgres command without a checked-in artifact")
 
     for label, text in {
         "docs/ARCHITECTURE.md": arch_text,

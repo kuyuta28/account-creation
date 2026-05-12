@@ -86,11 +86,7 @@ The root repo deliberately ignores service worktrees in `pytest.ini`; a plain ro
 
 Run service commands from the owning repo or worktree. On PowerShell, set `$env:PYTHONPATH` before `pytest` if inline environment assignment is not available.
 
-`registrar` additionally owns PostgreSQL bootstrap verification:
-
-```bash
-bootstrap-postgres --database-url "$DATABASE_URL"
-```
+`registrar` additionally owns PostgreSQL bootstrap verification, but this checkout does not currently include a checked-in `bootstrap-postgres` command artifact. Treat that as migration hardening debt until the owning repo adds the executable command and test.
 
 ## Runtime-Truth Checks
 
