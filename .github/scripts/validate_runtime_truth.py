@@ -226,8 +226,9 @@ def main() -> int:
         "docs/API-ARCHITECTURE.md": api_text,
         "docs/TESTING.md": testing_text,
     }.items():
-        if "localhost:8888" in text or "127.0.0.1:8888" in text:
-            errors.append(f"{label} contains stale 8888 runtime URL")
+        for stale_port in ("8799", "8800", "8801", "8802", "8888"):
+            if f"localhost:{stale_port}" in text or f"127.0.0.1:{stale_port}" in text:
+                errors.append(f"{label} contains stale runtime URL port: {stale_port}")
         for stale_storage_phrase in (
             "accounts.db as primary",
             "mail.db as primary",
