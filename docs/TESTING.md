@@ -120,4 +120,14 @@ No release is considered valid without fresh evidence from both layers:
 - service-repo test evidence
 - root orchestration runtime-truth evidence
 
-Both are required because the platform is multi-repo by design.
+Both are required because the platform is multi-repo by design. Record the command, commit SHA, timestamp, and result for each row.
+
+| Layer | Evidence command | Required result |
+|-------|------------------|-----------------|
+| Root orchestration | `python .github/scripts/validate_runtime_truth.py` | `Runtime truth validation passed.` |
+| `common` | `PYTHONPATH=src pytest tests -q` | pass |
+| `registrar` | `PYTHONPATH=src;../common/src pytest tests -q` | pass |
+| `mail-service` | `PYTHONPATH=src;../common/src pytest tests -q` | pass |
+| `aa-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` | pass |
+| `tts-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` | pass |
+| `desktop-ui` | `npm test -- --run` | pass |
