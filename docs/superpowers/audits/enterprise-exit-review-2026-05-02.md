@@ -53,7 +53,7 @@ Executed on `2026-05-11`:
 
 - Full platform CI remains federated by design. The root repo cannot directly execute service-repo CI on GitHub without collapsing the repo boundaries again.
 - SOPS/AGE secrets management is still design/spec work unless implemented in the deployment environment.
-- Flyway-managed migration execution is still future hardening where service-owned migration artifacts do not exist.
+- Flyway-managed migration execution is still future hardening: `registrar` now has a local-only PostgreSQL bootstrap smoke artifact, but no checked-in migration runner or `bootstrap-postgres` command artifact.
 - Full observability stack wiring, alerting, and dashboards remain future hardening beyond root runtime-truth validation.
 - Full service CI matrix status must be checked in the owning repos before release decisions.
 
@@ -63,7 +63,7 @@ Executed on `2026-05-11`:
 |------|----------------------------------------|
 | GitOps deployment | Checked-in workflow/runbook that promotes root orchestration and service revisions without collapsing repo boundaries |
 | SOPS/AGE secrets | Checked-in `.sops.yaml` plus documented key rotation and recovery procedure |
-| Flyway migration execution | Checked-in migration runner plus fresh-database verification test in the owning service repo |
+| Flyway migration execution | Checked-in migration runner plus executable bootstrap command; local-only fresh-database smoke artifacts are necessary but not sufficient |
 | Observability stack | Checked-in dashboard/alert/runbook artifacts plus service telemetry verification |
 | Full service CI matrix | Fresh release evidence table with commit SHA, timestamp, command, and result for each owning repo |
 
