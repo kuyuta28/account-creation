@@ -47,6 +47,7 @@ Executed on `2026-05-11`:
 - `common`: `pytest common/tests/contracts/test_no_reverse_imports.py common/tests/test_context.py -q` -> passed with `PYTHONPATH=common/src`.
 - `registrar`: `pytest registrar/tests/smoke/test_startup_contract.py registrar/tests/smoke/test_imports.py -q` -> passed with `PYTHONPATH=registrar;common/src`.
 - `desktop-ui`: `npm test -- --run src/__tests__/config.contract.test.ts` -> passed.
+- `common.context` reverse type references and the `mail-service` FastAPI `on_event("startup")` warning were already cleaned up in service-owned commits before this evidence refresh.
 
 ## Residual Risks
 
@@ -55,7 +56,6 @@ Executed on `2026-05-11`:
 - Flyway-managed migration execution is still future hardening where service-owned migration artifacts do not exist.
 - Full observability stack wiring, alerting, and dashboards remain future hardening beyond root runtime-truth validation.
 - Full service CI matrix status must be checked in the owning repos before release decisions.
-- `common.context` reverse type references and the `mail-service` FastAPI `on_event("startup")` warning were cleaned up after this review; keep checking service-owned tests before release decisions.
 
 ## Score
 
