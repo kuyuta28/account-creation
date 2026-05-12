@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from validate_runtime_truth import _extract_markdown_table
+from validate_runtime_truth import _extract_markdown_table, _stale_runtime_ports
 
 
 def test_extract_markdown_table_strips_backticks_and_stops_after_table():
@@ -24,3 +24,9 @@ After
         "common": "PYTHONPATH=src pytest tests -q",
         "registrar": "PYTHONPATH=src;../common/src pytest tests -q",
     }
+
+
+def test_stale_runtime_ports_detects_only_full_local_urls():
+    text = "localhost:8799 127.0.0.1:8801 port 8802 http://localhost:8709"
+
+    assert _stale_runtime_ports(text) == ["8799", "8801"]

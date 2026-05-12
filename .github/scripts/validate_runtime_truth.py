@@ -7,6 +7,7 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
+README_DOC = ROOT / "README.md"
 COMPOSE_FILE = ROOT / "docker-compose.yml"
 PYTEST_INI = ROOT / "pytest.ini"
 DOCS_CONSISTENCY_WORKFLOW = ROOT / ".github" / "workflows" / "docs-consistency.yml"
@@ -129,10 +130,19 @@ def _extract_markdown_table(text: str, header: str) -> dict[str, str]:
     return {}
 
 
+def _stale_runtime_ports(text: str) -> list[str]:
+    return [
+        port
+        for port in ("8799", "8800", "8801", "8802", "8888")
+        if f"localhost:{port}" in text or f"127.0.0.1:{port}" in text
+    ]
+
+
 def main() -> int:
     compose = _load_compose()
     docs_consistency_workflow_text = _read_text(DOCS_CONSISTENCY_WORKFLOW)
     root_contract_workflow_text = _read_text(ROOT_CONTRACT_WORKFLOW)
+    readme_text = _read_text(README_DOC)
     arch_text = _read_text(ARCH_DOC)
     api_text = _read_text(API_DOC)
     enterprise_standards_text = _read_text(ENTERPRISE_STANDARDS_DOC)
@@ -182,12 +192,17 @@ def main() -> int:
                 "http://localhost:8080/",
                 "docs/API-ARCHITECTURE.md",
             )
+            _require_contains(errors, readme_text, "dashboard `8080`", "README.md")
         elif service_name == "postgres":
             _require_contains(errors, arch_text, "localhost:5432", "docs/ARCHITECTURE.md")
+            _require_contains(errors, readme_text, "`postgres`", "README.md")
+            _require_contains(errors, readme_text, "`5432`", "README.md")
         else:
             url = f"http://localhost:{expected_port}"
             _require_contains(errors, arch_text, url, "docs/ARCHITECTURE.md")
             _require_contains(errors, api_text, url, "docs/API-ARCHITECTURE.md")
+            _require_contains(errors, readme_text, f"`{service_name}`", "README.md")
+            _require_contains(errors, readme_text, f"`{expected_port}`", "README.md")
 
     for service_name, expected_prefix in EXPECTED_PREFIXES.items():
         _require_contains(
@@ -295,13 +310,13 @@ def main() -> int:
         errors.append("docs/TESTING.md overclaims registrar PostgreSQL bootstrap artifact ownership")
 
     for label, text in {
+        "README.md": readme_text,
         "docs/ARCHITECTURE.md": arch_text,
         "docs/API-ARCHITECTURE.md": api_text,
         "docs/TESTING.md": testing_text,
     }.items():
-        for stale_port in ("8799", "8800", "8801", "8802", "8888"):
-            if f"localhost:{stale_port}" in text or f"127.0.0.1:{stale_port}" in text:
-                errors.append(f"{label} contains stale runtime URL port: {stale_port}")
+        for stale_port in _stale_runtime_ports(text):
+            errors.append(f"{label} contains stale runtime URL port: {stale_port}")
         for stale_storage_phrase in (
             "accounts.db as primary",
             "mail.db as primary",
