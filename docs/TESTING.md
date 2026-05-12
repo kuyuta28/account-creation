@@ -61,6 +61,7 @@ Current critical contract tests already introduced during remediation:
 - `common/tests/contracts/test_no_reverse_imports.py`
 - `common/tests/test_context.py`
 - `registrar/tests/smoke/test_startup_contract.py`
+- `registrar/tests/smoke/test_postgres_bootstrap_contract.py`
 - `desktop-ui/src/__tests__/config.contract.test.ts`
 
 ## Local Verification Commands
