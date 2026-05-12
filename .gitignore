@@ -18,6 +18,8 @@ data/
 # Local tooling / editor state
 .agents/
 .claude/
+__pycache__/
+*.pyc
 
 # Keep orchestration and docs visible
 !.github/
