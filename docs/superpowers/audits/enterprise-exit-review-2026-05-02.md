@@ -47,6 +47,9 @@ Executed on `2026-05-11`:
 - `common`: `pytest common/tests/contracts/test_no_reverse_imports.py common/tests/test_context.py -q` -> passed with `PYTHONPATH=common/src`.
 - `registrar`: `pytest registrar/tests/smoke/test_startup_contract.py registrar/tests/smoke/test_imports.py -q` -> passed with `PYTHONPATH=registrar;common/src`.
 - `desktop-ui`: `npm test -- --run src/__tests__/config.contract.test.ts` -> passed.
+- `mail-service`: `pytest mail-service/tests/test_smoke.py mail-service/tests/test_config.py -q` -> passed with `PYTHONPATH=mail-service/src;common/src`.
+- `aa-proxy`: `pytest aa-proxy/tests/test_smoke.py aa-proxy/tests/test_config.py -q` -> passed with `PYTHONPATH=aa-proxy/src;common/src`.
+- `tts-proxy`: `pytest tts-proxy/tests/test_smoke.py tts-proxy/tests/test_config.py -q` -> passed with `PYTHONPATH=tts-proxy/src;common/src`.
 - `common.context` reverse type references and the `mail-service` FastAPI `on_event("startup")` warning were already cleaned up in service-owned commits before this evidence refresh.
 
 ## Residual Risks
