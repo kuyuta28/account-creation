@@ -73,6 +73,7 @@ EXPECTED_CONTRACT_ARTIFACTS = (
     ROOT / "desktop-ui" / "src" / "__tests__" / "api.client.test.ts",
     ROOT / "desktop-ui" / "src" / "__tests__" / "App.test.tsx",
     ROOT / "desktop-ui" / "src" / "__tests__" / "ConfigPage.test.tsx",
+    ROOT / "desktop-ui" / "src" / "__tests__" / "AccountsPage.test.tsx",
 )
 
 EXPECTED_SERVICE_TEST_FLOOR_ARTIFACTS = (
