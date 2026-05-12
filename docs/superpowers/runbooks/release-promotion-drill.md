@@ -62,6 +62,20 @@ Suggested order:
 6. `desktop-ui`
 7. root orchestration repo
 
+## Release Evidence Template
+
+Record this table before any staging or production promotion. Use the exact commit SHA from each owning repo or worktree.
+
+| Layer | Command | Commit SHA | Timestamp | Result |
+|-------|---------|------------|-----------|--------|
+| root orchestration | `python .github/scripts/validate_runtime_truth.py` |  |  |  |
+| `common` | `PYTHONPATH=src pytest tests -q` |  |  |  |
+| `registrar` | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
+| `mail-service` | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
+| `aa-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
+| `tts-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
+| `desktop-ui` | `npm test -- --run` |  |  |  |
+
 ## Rollback Triggers
 
 Rollback immediately if any of these happen:

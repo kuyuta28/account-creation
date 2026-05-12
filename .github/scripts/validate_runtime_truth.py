@@ -12,6 +12,7 @@ PYTEST_INI = ROOT / "pytest.ini"
 ARCH_DOC = ROOT / "docs" / "ARCHITECTURE.md"
 API_DOC = ROOT / "docs" / "API-ARCHITECTURE.md"
 TESTING_DOC = ROOT / "docs" / "TESTING.md"
+RELEASE_RUNBOOK = ROOT / "docs" / "superpowers" / "runbooks" / "release-promotion-drill.md"
 INTERNAL_API_CONTRACT = ROOT / "docs" / "superpowers" / "contracts" / "internal-api.md"
 DESKTOP_CONFIG = ROOT / "desktop-ui" / "src" / "config.ts"
 
@@ -111,6 +112,7 @@ def main() -> int:
     arch_text = _read_text(ARCH_DOC)
     api_text = _read_text(API_DOC)
     testing_text = _read_text(TESTING_DOC)
+    release_runbook_text = _read_text(RELEASE_RUNBOOK)
     internal_api_contract_text = _read_text(INTERNAL_API_CONTRACT)
     desktop_config_text = _read_text(DESKTOP_CONFIG)
     pytest_ini_text = _read_text(PYTEST_INI)
@@ -189,10 +191,14 @@ def main() -> int:
     for service_name, command in EXPECTED_SERVICE_TEST_COMMANDS.items():
         _require_contains(errors, testing_text, f"| `{service_name}` |", "docs/TESTING.md")
         _require_contains(errors, testing_text, f"`{command}`", "docs/TESTING.md")
+        _require_contains(errors, release_runbook_text, f"| `{service_name}` |", "docs/superpowers/runbooks/release-promotion-drill.md")
+        _require_contains(errors, release_runbook_text, f"`{command}`", "docs/superpowers/runbooks/release-promotion-drill.md")
         if service_name != "desktop-ui":
             _require_contains(errors, pytest_ini_text, f"--ignore={service_name}", "pytest.ini")
             _require_contains(errors, pytest_ini_text, service_name, "pytest.ini")
 
+    _require_contains(errors, release_runbook_text, "| root orchestration |", "docs/superpowers/runbooks/release-promotion-drill.md")
+    _require_contains(errors, release_runbook_text, "`python .github/scripts/validate_runtime_truth.py`", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, pytest_ini_text, "--ignore=desktop-ui", "pytest.ini")
     _require_contains(errors, pytest_ini_text, "--ignore=any-auto-register", "pytest.ini")
 
