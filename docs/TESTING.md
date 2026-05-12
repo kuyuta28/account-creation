@@ -47,6 +47,15 @@ Every backend service must maintain:
 - unit tests for config and service-local logic
 - integration tests where runtime-critical persistence or contract behavior is involved
 
+Current service test floor artifacts:
+
+- `mail-service/tests/test_smoke.py`
+- `mail-service/tests/test_config.py`
+- `aa-proxy/tests/test_smoke.py`
+- `aa-proxy/tests/test_config.py`
+- `tts-proxy/tests/test_smoke.py`
+- `tts-proxy/tests/test_config.py`
+
 Current critical contract tests already introduced during remediation:
 
 - `common/tests/contracts/test_no_reverse_imports.py`

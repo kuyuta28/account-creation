@@ -63,6 +63,15 @@ EXPECTED_CONTRACT_ARTIFACTS = (
     ROOT / "desktop-ui" / "src" / "__tests__" / "config.contract.test.ts",
 )
 
+EXPECTED_SERVICE_TEST_FLOOR_ARTIFACTS = (
+    ROOT / "mail-service" / "tests" / "test_smoke.py",
+    ROOT / "mail-service" / "tests" / "test_config.py",
+    ROOT / "aa-proxy" / "tests" / "test_smoke.py",
+    ROOT / "aa-proxy" / "tests" / "test_config.py",
+    ROOT / "tts-proxy" / "tests" / "test_smoke.py",
+    ROOT / "tts-proxy" / "tests" / "test_config.py",
+)
+
 
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
@@ -190,6 +199,12 @@ def main() -> int:
     for artifact in EXPECTED_CONTRACT_ARTIFACTS:
         if not artifact.exists():
             errors.append(f"Missing expected contract artifact: {artifact.relative_to(ROOT)}")
+        else:
+            _require_contains(errors, testing_text, str(artifact.relative_to(ROOT)).replace("\\", "/"), "docs/TESTING.md")
+
+    for artifact in EXPECTED_SERVICE_TEST_FLOOR_ARTIFACTS:
+        if not artifact.exists():
+            errors.append(f"Missing expected service test floor artifact: {artifact.relative_to(ROOT)}")
         else:
             _require_contains(errors, testing_text, str(artifact.relative_to(ROOT)).replace("\\", "/"), "docs/TESTING.md")
 
