@@ -113,6 +113,22 @@ def _require_regex(errors: list[str], text: str, pattern: str, label: str) -> No
         errors.append(f"{label} missing pattern: {pattern}")
 
 
+def _extract_markdown_table(text: str, header: str) -> dict[str, str]:
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if line.strip() != header:
+            continue
+        rows: dict[str, str] = {}
+        for row in lines[index + 2:]:
+            if not row.startswith("|"):
+                break
+            cells = [cell.strip() for cell in row.strip("|").split("|")]
+            if len(cells) >= 2:
+                rows[cells[0].strip("`")] = cells[1].strip("`")
+        return rows
+    return {}
+
+
 def main() -> int:
     compose = _load_compose()
     docs_consistency_workflow_text = _read_text(DOCS_CONSISTENCY_WORKFLOW)
@@ -213,19 +229,31 @@ def main() -> int:
         _require_contains(errors, enterprise_standards_text, envelope_field, "docs/ENTERPRISE-STANDARDS.md")
         _require_contains(errors, api_text, envelope_field, "docs/API-ARCHITECTURE.md")
 
+    release_evidence_rows = _extract_markdown_table(
+        release_runbook_text,
+        "| Layer | Command | Commit SHA | Timestamp | Result |",
+    )
+    expected_release_evidence = {
+        "root orchestration": "python .github/scripts/validate_runtime_truth.py",
+        **EXPECTED_SERVICE_TEST_COMMANDS,
+    }
+    for layer, command in expected_release_evidence.items():
+        if release_evidence_rows.get(layer) != command:
+            errors.append(
+                "docs/superpowers/runbooks/release-promotion-drill.md "
+                f"release evidence row mismatch for {layer}: expected `{command}`, "
+                f"found `{release_evidence_rows.get(layer)}`"
+            )
+
     for service_name, command in EXPECTED_SERVICE_TEST_COMMANDS.items():
         _require_contains(errors, testing_text, f"| `{service_name}` |", "docs/TESTING.md")
         _require_contains(errors, testing_text, f"`{command}`", "docs/TESTING.md")
-        _require_contains(errors, release_runbook_text, f"| `{service_name}` |", "docs/superpowers/runbooks/release-promotion-drill.md")
-        _require_contains(errors, release_runbook_text, f"`{command}`", "docs/superpowers/runbooks/release-promotion-drill.md")
         if service_name != "desktop-ui":
             _require_contains(errors, pytest_ini_text, f"--ignore={service_name}", "pytest.ini")
             _require_contains(errors, pytest_ini_text, service_name, "pytest.ini")
 
     _require_contains(errors, release_runbook_text, "| Layer | Command | Commit SHA | Timestamp | Result |", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "|-------|---------|------------|-----------|--------|", "docs/superpowers/runbooks/release-promotion-drill.md")
-    _require_contains(errors, release_runbook_text, "| root orchestration |", "docs/superpowers/runbooks/release-promotion-drill.md")
-    _require_contains(errors, release_runbook_text, "`python .github/scripts/validate_runtime_truth.py`", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "PostgreSQL migrations or bootstrap changes were exercised on a local fresh database for release rehearsal and on a fresh staging database before real promotion", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "migration/bootstrap failure on PostgreSQL", "docs/superpowers/runbooks/release-promotion-drill.md")
     for debt in ("GitOps deployment", "SOPS/AGE secrets", "Flyway migration execution", "Observability stack", "Full service CI matrix"):
