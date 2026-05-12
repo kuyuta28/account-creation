@@ -10,6 +10,8 @@
 
 ## Service-Specific Documentation
 
+These links point into sibling service worktrees. The root repo indexes them for operators but does not own their executable test suites or service-local release gates.
+
 | Service | Port | Docs |
 |---------|------|------|
 | [registrar](../registrar/docs/README.md) | 8709 | [API Reference](../registrar/docs/api-reference.md), [Architecture](../registrar/docs/architecture.md) |
