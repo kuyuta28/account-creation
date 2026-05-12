@@ -61,6 +61,7 @@ Current service test floor artifacts:
 
 Current critical contract tests already introduced during remediation:
 
+- `.github/scripts/test_validate_runtime_truth.py`
 - `common/tests/contracts/test_no_reverse_imports.py`
 - `common/tests/test_context.py`
 - `registrar/tests/unit/test_internal_client.py`
@@ -77,6 +78,7 @@ Run these from the owning repo or worktree.
 
 ```bash
 python .github/scripts/validate_runtime_truth.py
+PYTHONPATH=.github/scripts pytest .github/scripts/test_validate_runtime_truth.py -q
 ```
 
 The root repo deliberately ignores service worktrees in `pytest.ini`; a plain root-level `pytest` must not be used as the platform test gate.

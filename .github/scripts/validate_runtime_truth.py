@@ -63,6 +63,7 @@ EXPECTED_DESKTOP_CONFIG = {
 }
 
 EXPECTED_CONTRACT_ARTIFACTS = (
+    ROOT / ".github" / "scripts" / "test_validate_runtime_truth.py",
     ROOT / "common" / "tests" / "contracts" / "test_no_reverse_imports.py",
     ROOT / "common" / "tests" / "test_context.py",
     ROOT / "registrar" / "tests" / "unit" / "test_internal_client.py",
