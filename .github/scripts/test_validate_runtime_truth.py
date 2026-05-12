@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from validate_runtime_truth import _extract_markdown_table, _extract_published_ports, _stale_runtime_ports
+from validate_runtime_truth import (
+    _extract_markdown_table,
+    _extract_published_ports,
+    _require_contains,
+    _require_regex,
+    _stale_runtime_ports,
+)
 
 
 def test_extract_markdown_table_strips_backticks_and_stops_after_table():
@@ -48,3 +54,21 @@ def test_extract_published_ports_handles_compose_port_formats():
         "postgres": {"5432"},
         "common": set(),
     }
+
+
+def test_require_contains_appends_error_only_when_missing():
+    errors: list[str] = []
+
+    _require_contains(errors, "runtime truth", "truth", "doc.md")
+    _require_contains(errors, "runtime truth", "missing", "doc.md")
+
+    assert errors == ["doc.md missing expected text: missing"]
+
+
+def test_require_regex_appends_error_only_when_missing():
+    errors: list[str] = []
+
+    _require_regex(errors, "line one\nline two", r"(?m)^line two$", "doc.md")
+    _require_regex(errors, "line one\nline two", r"(?m)^line three$", "doc.md")
+
+    assert errors == ["doc.md missing pattern: (?m)^line three$"]
