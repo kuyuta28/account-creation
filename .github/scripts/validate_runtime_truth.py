@@ -222,6 +222,8 @@ def main() -> int:
         errors.append("docs/API-ARCHITECTURE.md still describes internal API contract as unformalized")
     if "bootstrap-postgres --database-url" in testing_text:
         errors.append("docs/TESTING.md references bootstrap-postgres command without a checked-in artifact")
+    if "now owns the canonical PostgreSQL bootstrap command" in testing_text:
+        errors.append("docs/TESTING.md overclaims registrar PostgreSQL bootstrap artifact ownership")
 
     for label, text in {
         "docs/ARCHITECTURE.md": arch_text,
