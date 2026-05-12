@@ -240,6 +240,10 @@ def main() -> int:
     _require_contains(errors, api_text, "docs/superpowers/contracts/internal-api.md", "docs/API-ARCHITECTURE.md")
     _require_contains(errors, internal_api_contract_text, "Required header: `X-Internal-Key`", "docs/superpowers/contracts/internal-api.md")
     _require_contains(errors, internal_api_contract_text, "GET /api/v1/internal/accounts", "docs/superpowers/contracts/internal-api.md")
+    _require_contains(errors, internal_api_contract_text, "default timeout: `30s`", "docs/superpowers/contracts/internal-api.md")
+    _require_contains(errors, internal_api_contract_text, "`GET` requests after network failure or timeout", "docs/superpowers/contracts/internal-api.md")
+    _require_contains(errors, internal_api_contract_text, "idempotent `POST /upsert`", "docs/superpowers/contracts/internal-api.md")
+    _require_contains(errors, internal_api_contract_text, "`PATCH`, `PUT`, `DELETE` only when caller knows", "docs/superpowers/contracts/internal-api.md")
 
     if "must be formalized in a dedicated contract document" in api_text:
         errors.append("docs/API-ARCHITECTURE.md still describes internal API contract as unformalized")
