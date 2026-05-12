@@ -204,7 +204,7 @@ def main() -> int:
     _require_contains(errors, release_runbook_text, "|-------|---------|------------|-----------|--------|", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "| root orchestration |", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "`python .github/scripts/validate_runtime_truth.py`", "docs/superpowers/runbooks/release-promotion-drill.md")
-    _require_contains(errors, release_runbook_text, "PostgreSQL migrations or bootstrap changes were exercised on a fresh staging database", "docs/superpowers/runbooks/release-promotion-drill.md")
+    _require_contains(errors, release_runbook_text, "PostgreSQL migrations or bootstrap changes were exercised on a local fresh database for release rehearsal and on a fresh staging database before real promotion", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "migration/bootstrap failure on PostgreSQL", "docs/superpowers/runbooks/release-promotion-drill.md")
     for debt in ("GitOps deployment", "SOPS/AGE secrets", "Flyway migration execution", "Observability stack", "Full service CI matrix"):
         _require_contains(errors, exit_review_text, f"| {debt} |", "docs/superpowers/audits/enterprise-exit-review-2026-05-02.md")

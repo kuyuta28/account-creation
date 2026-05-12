@@ -40,7 +40,7 @@ Do not promote to production unless all of these are true:
 
 - service-specific smoke/unit/integration suites passed in the owning repos
 - root orchestration checks passed
-- PostgreSQL migrations or bootstrap changes were exercised on a fresh staging database
+- PostgreSQL migrations or bootstrap changes were exercised on a local fresh database for release rehearsal and on a fresh staging database before real promotion
 - desktop UI runtime config still points at the approved backend contract
 - internal API consumers can still reach `registrar` on `/api/v1/internal/*`
 
