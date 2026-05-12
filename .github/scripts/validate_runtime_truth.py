@@ -9,6 +9,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 COMPOSE_FILE = ROOT / "docker-compose.yml"
 PYTEST_INI = ROOT / "pytest.ini"
+DOCS_CONSISTENCY_WORKFLOW = ROOT / ".github" / "workflows" / "docs-consistency.yml"
+ROOT_CONTRACT_WORKFLOW = ROOT / ".github" / "workflows" / "test-platform.yml"
 ARCH_DOC = ROOT / "docs" / "ARCHITECTURE.md"
 API_DOC = ROOT / "docs" / "API-ARCHITECTURE.md"
 ENTERPRISE_STANDARDS_DOC = ROOT / "docs" / "ENTERPRISE-STANDARDS.md"
@@ -113,6 +115,8 @@ def _require_regex(errors: list[str], text: str, pattern: str, label: str) -> No
 
 def main() -> int:
     compose = _load_compose()
+    docs_consistency_workflow_text = _read_text(DOCS_CONSISTENCY_WORKFLOW)
+    root_contract_workflow_text = _read_text(ROOT_CONTRACT_WORKFLOW)
     arch_text = _read_text(ARCH_DOC)
     api_text = _read_text(API_DOC)
     enterprise_standards_text = _read_text(ENTERPRISE_STANDARDS_DOC)
@@ -123,6 +127,15 @@ def main() -> int:
     desktop_config_text = _read_text(DESKTOP_CONFIG)
     pytest_ini_text = _read_text(PYTEST_INI)
     errors: list[str] = []
+
+    _require_contains(errors, docs_consistency_workflow_text, "name: Docs Consistency", ".github/workflows/docs-consistency.yml")
+    _require_contains(errors, docs_consistency_workflow_text, "python .github/scripts/validate_runtime_truth.py", ".github/workflows/docs-consistency.yml")
+    _require_contains(errors, root_contract_workflow_text, "name: Root Orchestration Contract Checks", ".github/workflows/test-platform.yml")
+    _require_contains(errors, root_contract_workflow_text, "root-orchestration-contract", ".github/workflows/test-platform.yml")
+    _require_contains(errors, root_contract_workflow_text, "python .github/scripts/validate_runtime_truth.py", ".github/workflows/test-platform.yml")
+    for forbidden_workflow_claim in ("service CI", "migration runner", "bootstrap-postgres"):
+        if forbidden_workflow_claim in docs_consistency_workflow_text or forbidden_workflow_claim in root_contract_workflow_text:
+            errors.append(f"Root workflows overclaim unsupported responsibility: {forbidden_workflow_claim}")
 
     published_ports = _extract_published_ports(compose)
 

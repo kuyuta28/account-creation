@@ -26,6 +26,8 @@ Root automation:
 - `.github/workflows/test-platform.yml`
 - `.github/scripts/validate_runtime_truth.py`
 
+These root workflows validate docs/runtime truth and root-owned contract artifacts only; they do not run service CI, migration runners, or service-local release gates.
+
 ### Service repos
 
 These repositories own their own runnable test suites:
