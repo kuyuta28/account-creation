@@ -71,6 +71,7 @@ EXPECTED_CONTRACT_ARTIFACTS = (
     ROOT / "registrar" / "tests" / "smoke" / "test_postgres_bootstrap_contract.py",
     ROOT / "desktop-ui" / "src" / "__tests__" / "config.contract.test.ts",
     ROOT / "desktop-ui" / "src" / "__tests__" / "api.client.test.ts",
+    ROOT / "desktop-ui" / "src" / "__tests__" / "App.test.tsx",
 )
 
 EXPECTED_SERVICE_TEST_FLOOR_ARTIFACTS = (

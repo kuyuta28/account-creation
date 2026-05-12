@@ -70,6 +70,7 @@ Current critical contract tests already introduced during remediation:
 - `registrar/tests/smoke/test_postgres_bootstrap_contract.py`
 - `desktop-ui/src/__tests__/config.contract.test.ts`
 - `desktop-ui/src/__tests__/api.client.test.ts`
+- `desktop-ui/src/__tests__/App.test.tsx`
 
 ## Local Verification Commands
 
