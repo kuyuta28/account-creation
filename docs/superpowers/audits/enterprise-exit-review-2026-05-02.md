@@ -57,6 +57,16 @@ Executed on `2026-05-11`:
 - Full observability stack wiring, alerting, and dashboards remain future hardening beyond root runtime-truth validation.
 - Full service CI matrix status must be checked in the owning repos before release decisions.
 
+## Hardening Debt Register
+
+| Debt | Required artifact before claiming done |
+|------|----------------------------------------|
+| GitOps deployment | Checked-in workflow/runbook that promotes root orchestration and service revisions without collapsing repo boundaries |
+| SOPS/AGE secrets | Checked-in `.sops.yaml` plus documented key rotation and recovery procedure |
+| Flyway migration execution | Checked-in migration runner plus fresh-database verification test in the owning service repo |
+| Observability stack | Checked-in dashboard/alert/runbook artifacts plus service telemetry verification |
+| Full service CI matrix | Fresh release evidence table with commit SHA, timestamp, command, and result for each owning repo |
+
 ## Score
 
 ### Root orchestration boundary

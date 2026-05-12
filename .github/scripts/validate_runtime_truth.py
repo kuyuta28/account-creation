@@ -13,6 +13,7 @@ ARCH_DOC = ROOT / "docs" / "ARCHITECTURE.md"
 API_DOC = ROOT / "docs" / "API-ARCHITECTURE.md"
 TESTING_DOC = ROOT / "docs" / "TESTING.md"
 RELEASE_RUNBOOK = ROOT / "docs" / "superpowers" / "runbooks" / "release-promotion-drill.md"
+EXIT_REVIEW = ROOT / "docs" / "superpowers" / "audits" / "enterprise-exit-review-2026-05-02.md"
 INTERNAL_API_CONTRACT = ROOT / "docs" / "superpowers" / "contracts" / "internal-api.md"
 DESKTOP_CONFIG = ROOT / "desktop-ui" / "src" / "config.ts"
 
@@ -113,6 +114,7 @@ def main() -> int:
     api_text = _read_text(API_DOC)
     testing_text = _read_text(TESTING_DOC)
     release_runbook_text = _read_text(RELEASE_RUNBOOK)
+    exit_review_text = _read_text(EXIT_REVIEW)
     internal_api_contract_text = _read_text(INTERNAL_API_CONTRACT)
     desktop_config_text = _read_text(DESKTOP_CONFIG)
     pytest_ini_text = _read_text(PYTEST_INI)
@@ -201,6 +203,8 @@ def main() -> int:
     _require_contains(errors, release_runbook_text, "|-------|---------|------------|-----------|--------|", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "| root orchestration |", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "`python .github/scripts/validate_runtime_truth.py`", "docs/superpowers/runbooks/release-promotion-drill.md")
+    for debt in ("GitOps deployment", "SOPS/AGE secrets", "Flyway migration execution", "Observability stack", "Full service CI matrix"):
+        _require_contains(errors, exit_review_text, f"| {debt} |", "docs/superpowers/audits/enterprise-exit-review-2026-05-02.md")
     _require_contains(errors, pytest_ini_text, "--ignore=desktop-ui", "pytest.ini")
     _require_contains(errors, pytest_ini_text, "--ignore=any-auto-register", "pytest.ini")
 
