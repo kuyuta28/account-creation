@@ -197,6 +197,8 @@ def main() -> int:
             _require_contains(errors, pytest_ini_text, f"--ignore={service_name}", "pytest.ini")
             _require_contains(errors, pytest_ini_text, service_name, "pytest.ini")
 
+    _require_contains(errors, release_runbook_text, "| Layer | Command | Commit SHA | Timestamp | Result |", "docs/superpowers/runbooks/release-promotion-drill.md")
+    _require_contains(errors, release_runbook_text, "|-------|---------|------------|-----------|--------|", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "| root orchestration |", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "`python .github/scripts/validate_runtime_truth.py`", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, pytest_ini_text, "--ignore=desktop-ui", "pytest.ini")

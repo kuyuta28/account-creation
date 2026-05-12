@@ -116,7 +116,7 @@ No release is considered valid without fresh evidence from both layers:
 - service-repo test evidence
 - root orchestration runtime-truth evidence
 
-Both are required because the platform is multi-repo by design. Record the command, commit SHA, timestamp, and result for each row.
+Both are required because the platform is multi-repo by design. Record the command, commit SHA, timestamp, and result for each row. The root validator enforces the release evidence template shape in `docs/superpowers/runbooks/release-promotion-drill.md`.
 
 | Layer | Evidence command | Required result |
 |-------|------------------|-----------------|
