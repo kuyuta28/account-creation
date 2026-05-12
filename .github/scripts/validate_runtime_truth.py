@@ -11,6 +11,7 @@ COMPOSE_FILE = ROOT / "docker-compose.yml"
 PYTEST_INI = ROOT / "pytest.ini"
 ARCH_DOC = ROOT / "docs" / "ARCHITECTURE.md"
 API_DOC = ROOT / "docs" / "API-ARCHITECTURE.md"
+ENTERPRISE_STANDARDS_DOC = ROOT / "docs" / "ENTERPRISE-STANDARDS.md"
 TESTING_DOC = ROOT / "docs" / "TESTING.md"
 RELEASE_RUNBOOK = ROOT / "docs" / "superpowers" / "runbooks" / "release-promotion-drill.md"
 EXIT_REVIEW = ROOT / "docs" / "superpowers" / "audits" / "enterprise-exit-review-2026-05-02.md"
@@ -113,6 +114,7 @@ def main() -> int:
     compose = _load_compose()
     arch_text = _read_text(ARCH_DOC)
     api_text = _read_text(API_DOC)
+    enterprise_standards_text = _read_text(ENTERPRISE_STANDARDS_DOC)
     testing_text = _read_text(TESTING_DOC)
     release_runbook_text = _read_text(RELEASE_RUNBOOK)
     exit_review_text = _read_text(EXIT_REVIEW)
@@ -190,6 +192,9 @@ def main() -> int:
         r"(?m)^- `desktop-ui` and backend services are validated in their own repositories\.$",
         "docs/API-ARCHITECTURE.md",
     )
+    _require_contains(errors, enterprise_standards_text, "PostgreSQL là runtime truth", "docs/ENTERPRISE-STANDARDS.md")
+    _require_contains(errors, enterprise_standards_text, "SQLite chỉ còn dành cho", "docs/ENTERPRISE-STANDARDS.md")
+    _require_contains(errors, enterprise_standards_text, "legacy SQLite fixtures only", "docs/ENTERPRISE-STANDARDS.md")
 
     for service_name, command in EXPECTED_SERVICE_TEST_COMMANDS.items():
         _require_contains(errors, testing_text, f"| `{service_name}` |", "docs/TESTING.md")
