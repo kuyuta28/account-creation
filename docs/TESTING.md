@@ -52,6 +52,7 @@ Every backend service must maintain:
 Current service test floor artifacts:
 
 - `common/tests/test_smoke.py`
+- `registrar/tests/unit/test_api_services.py`
 - `mail-service/tests/test_smoke.py`
 - `mail-service/tests/test_config.py`
 - `aa-proxy/tests/test_smoke.py`

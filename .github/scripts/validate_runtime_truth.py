@@ -75,6 +75,7 @@ EXPECTED_CONTRACT_ARTIFACTS = (
 
 EXPECTED_SERVICE_TEST_FLOOR_ARTIFACTS = (
     ROOT / "common" / "tests" / "test_smoke.py",
+    ROOT / "registrar" / "tests" / "unit" / "test_api_services.py",
     ROOT / "mail-service" / "tests" / "test_smoke.py",
     ROOT / "mail-service" / "tests" / "test_config.py",
     ROOT / "aa-proxy" / "tests" / "test_smoke.py",
