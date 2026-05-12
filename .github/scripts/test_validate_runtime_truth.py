@@ -4,6 +4,7 @@ from validate_runtime_truth import (
     _extract_markdown_table,
     _extract_published_ports,
     _require_contains,
+    _require_documented_artifact,
     _require_regex,
     _stale_runtime_ports,
 )
@@ -72,3 +73,22 @@ def test_require_regex_appends_error_only_when_missing():
     _require_regex(errors, "line one\nline two", r"(?m)^line three$", "doc.md")
 
     assert errors == ["doc.md missing pattern: (?m)^line three$"]
+
+
+def test_require_documented_artifact_checks_existing_path_in_docs():
+    errors: list[str] = []
+    artifact = __import__("pathlib").Path(__file__)
+    docs_text = ".github/scripts/test_validate_runtime_truth.py"
+
+    _require_documented_artifact(errors, docs_text, artifact, "docs/TESTING.md")
+
+    assert errors == []
+
+
+def test_require_documented_artifact_reports_existing_undocumented_path():
+    errors: list[str] = []
+    artifact = __import__("pathlib").Path(__file__)
+
+    _require_documented_artifact(errors, "", artifact, "docs/TESTING.md")
+
+    assert errors == ["docs/TESTING.md missing expected text: .github/scripts/test_validate_runtime_truth.py"]

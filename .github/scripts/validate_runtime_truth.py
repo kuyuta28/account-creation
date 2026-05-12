@@ -141,6 +141,13 @@ def _stale_runtime_ports(text: str) -> list[str]:
     ]
 
 
+def _require_documented_artifact(errors: list[str], docs_text: str, artifact: Path, label: str) -> None:
+    if not artifact.exists():
+        errors.append(f"Missing expected artifact: {artifact.relative_to(ROOT)}")
+        return
+    _require_contains(errors, docs_text, str(artifact.relative_to(ROOT)).replace("\\", "/"), label)
+
+
 def main() -> int:
     compose = _load_compose()
     docs_consistency_workflow_text = _read_text(DOCS_CONSISTENCY_WORKFLOW)
@@ -280,16 +287,10 @@ def main() -> int:
     _require_contains(errors, pytest_ini_text, "--ignore=any-auto-register", "pytest.ini")
 
     for artifact in EXPECTED_CONTRACT_ARTIFACTS:
-        if not artifact.exists():
-            errors.append(f"Missing expected contract artifact: {artifact.relative_to(ROOT)}")
-        else:
-            _require_contains(errors, testing_text, str(artifact.relative_to(ROOT)).replace("\\", "/"), "docs/TESTING.md")
+        _require_documented_artifact(errors, testing_text, artifact, "docs/TESTING.md")
 
     for artifact in EXPECTED_SERVICE_TEST_FLOOR_ARTIFACTS:
-        if not artifact.exists():
-            errors.append(f"Missing expected service test floor artifact: {artifact.relative_to(ROOT)}")
-        else:
-            _require_contains(errors, testing_text, str(artifact.relative_to(ROOT)).replace("\\", "/"), "docs/TESTING.md")
+        _require_documented_artifact(errors, testing_text, artifact, "docs/TESTING.md")
 
     for name, value in EXPECTED_DESKTOP_CONFIG.items():
         _require_contains(errors, api_text, f"export const {name} = \"{value}\";", "docs/API-ARCHITECTURE.md")
