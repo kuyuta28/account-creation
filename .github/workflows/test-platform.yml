@@ -16,9 +16,13 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install validator dependencies
-        run: python -m pip install --upgrade pip pyyaml
+        run: python -m pip install --upgrade pip pyyaml pytest
       - name: Validate root runtime truth
         run: python .github/scripts/validate_runtime_truth.py
+      - name: Validate Traefik public routes
+        run: python .github/scripts/validate_traefik_routes.py
+      - name: Test root validators
+        run: PYTHONPATH=.github/scripts pytest .github/scripts/test_validate_runtime_truth.py .github/scripts/test_validate_traefik_routes.py -q
       - name: Verify orchestration ownership docs exist
         run: |
           test -f README.md

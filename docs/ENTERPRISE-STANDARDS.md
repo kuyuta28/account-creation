@@ -107,12 +107,13 @@ Khi lỗi:
 
 ### Nguyên tắc
 - **PostgreSQL là runtime truth** cho production và staging.
-- **SQLite chỉ còn dành cho** local fixtures, isolated tests, hoặc migration utilities được gắn nhãn legacy.
+- **SQLite chỉ còn dành cho** isolated tests hoặc migration utilities được gắn nhãn legacy.
+- **Runtime services dùng PostgreSQL qua `DATABASE_URL`; không fallback SQLite.**
 - **NullPool** — không connection pooling.
 - **Idempotent migrations** — ALTER TABLE IF NOT EXISTS.
 - **Index đúng** — (service, disabled), (service, email unique).
 - **PRAGMA** — chỉ áp dụng cho legacy SQLite paths.
-- **Retry** — `_retry_db_op()` cho "database is locked" errors.
+- **Retry** — `_retry_db_op()` cho legacy conversion flows.
 
 ### Environment Isolation
 
@@ -120,17 +121,16 @@ Khi lỗi:
 |-----|---------|---------|
 | `prod` | `DATABASE_URL` (PostgreSQL) | Canonical production runtime |
 | `staging` | `DATABASE_URL` (PostgreSQL) | Canonical staging runtime |
-| `dev` | `DATABASE_URL` or local SQLite fixture | Local dev + migration work |
-| `test` | disposable SQLite or ephemeral PostgreSQL | CI/CD and isolated tests |
+| `dev` | `DATABASE_URL` (PostgreSQL) | Local runtime + migration work |
+| `test` | disposable SQLite fixture or ephemeral PostgreSQL | CI/CD and isolated tests |
 
 **Config:** `APP_ENV=dev|prod|test` via `.env` hoặc environment variable.
 
 **Usage:**
 ```python
-from common.env import APP_ENV, db_path
+import os
 
-# db_path() is for legacy SQLite fixtures only
-db = db_path()
+DATABASE_URL = os.environ["DATABASE_URL"]
 ```
 
 ---

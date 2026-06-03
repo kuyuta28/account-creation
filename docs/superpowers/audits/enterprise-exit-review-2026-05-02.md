@@ -64,11 +64,12 @@ Executed on `2026-05-11`:
 
 | Debt | Required artifact before claiming done |
 |------|----------------------------------------|
-| GitOps deployment | Checked-in workflow/runbook that promotes root orchestration and service revisions without collapsing repo boundaries |
-| SOPS/AGE secrets | Checked-in `.sops.yaml` plus documented key rotation and recovery procedure |
-| Flyway migration execution | Checked-in migration runner plus executable bootstrap command; local-only fresh-database smoke artifacts are necessary but not sufficient |
-| Observability stack | Checked-in dashboard/alert/runbook artifacts plus service telemetry verification |
-| Full service CI matrix | Fresh release evidence table with commit SHA, timestamp, command, and result for each owning repo |
+| GitOps deployment | `.github/workflows/deploy-staging.yml`, `.github/workflows/deploy-production.yml`, `docker-compose.staging.yml`, `docker-compose.prod.yml`, and `docs/superpowers/runbooks/gitops-deployment.md` |
+| SOPS/AGE secrets | `.sops.yaml`, `config/staging/secrets.example.yaml`, `config/prod/secrets.example.yaml`, and `docs/superpowers/runbooks/secrets-rotation.md` |
+| Flyway migration execution | `.github/workflows/db-migrate.yml`, `docker-compose.migrations.yml`, `migrations/sql/V001__platform_bootstrap.sql`, and `docs/superpowers/runbooks/database-migrations.md` |
+| Observability stack | `docker-compose.observability.yml`, `observability/prometheus/`, `observability/grafana/`, and `docs/superpowers/runbooks/observability.md` |
+| Full service CI matrix | `.github/workflows/release-evidence.yml` and release evidence table with repository, commit SHA, image tag or digest, command, CI run URL, timestamp, and result |
+| Traefik public routing contract | `docs/superpowers/contracts/traefik-public-routes.md`, `.github/scripts/validate_traefik_routes.py`, `.github/scripts/test_validate_traefik_routes.py`, and `scripts/smoke-traefik-routes.ps1` |
 
 ## Score
 

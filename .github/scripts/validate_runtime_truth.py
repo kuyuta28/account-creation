@@ -19,7 +19,34 @@ TESTING_DOC = ROOT / "docs" / "TESTING.md"
 RELEASE_RUNBOOK = ROOT / "docs" / "superpowers" / "runbooks" / "release-promotion-drill.md"
 EXIT_REVIEW = ROOT / "docs" / "superpowers" / "audits" / "enterprise-exit-review-2026-05-02.md"
 INTERNAL_API_CONTRACT = ROOT / "docs" / "superpowers" / "contracts" / "internal-api.md"
-DESKTOP_CONFIG = ROOT / "desktop-ui" / "src" / "config.ts"
+TRAEFIK_ROUTE_CONTRACT = ROOT / "docs" / "superpowers" / "contracts" / "traefik-public-routes.md"
+TRAEFIK_ROUTE_VALIDATOR = ROOT / ".github" / "scripts" / "validate_traefik_routes.py"
+TRAEFIK_ROUTE_VALIDATOR_TEST = ROOT / ".github" / "scripts" / "test_validate_traefik_routes.py"
+TRAEFIK_ROUTE_SMOKE = ROOT / "scripts" / "smoke-traefik-routes.ps1"
+SOPS_CONFIG = ROOT / ".sops.yaml"
+STAGING_SECRETS = ROOT / "config" / "staging" / "secrets.yaml"
+PROD_SECRETS = ROOT / "config" / "prod" / "secrets.yaml"
+STAGING_SECRETS_EXAMPLE = ROOT / "config" / "staging" / "secrets.example.yaml"
+PROD_SECRETS_EXAMPLE = ROOT / "config" / "prod" / "secrets.example.yaml"
+SECRETS_RUNBOOK = ROOT / "docs" / "superpowers" / "runbooks" / "secrets-rotation.md"
+STAGING_COMPOSE = ROOT / "docker-compose.staging.yml"
+PROD_COMPOSE = ROOT / "docker-compose.prod.yml"
+MIGRATIONS_COMPOSE = ROOT / "docker-compose.migrations.yml"
+OBSERVABILITY_COMPOSE = ROOT / "docker-compose.observability.yml"
+DEPLOY_STAGING_WORKFLOW = ROOT / ".github" / "workflows" / "deploy-staging.yml"
+DEPLOY_PRODUCTION_WORKFLOW = ROOT / ".github" / "workflows" / "deploy-production.yml"
+DB_MIGRATE_WORKFLOW = ROOT / ".github" / "workflows" / "db-migrate.yml"
+RELEASE_EVIDENCE_WORKFLOW = ROOT / ".github" / "workflows" / "release-evidence.yml"
+GITOPS_RUNBOOK = ROOT / "docs" / "superpowers" / "runbooks" / "gitops-deployment.md"
+MIGRATION_RUNBOOK = ROOT / "docs" / "superpowers" / "runbooks" / "database-migrations.md"
+OBSERVABILITY_RUNBOOK = ROOT / "docs" / "superpowers" / "runbooks" / "observability.md"
+PLATFORM_MIGRATION = ROOT / "migrations" / "sql" / "V001__platform_bootstrap.sql"
+PROMETHEUS_CONFIG = ROOT / "observability" / "prometheus" / "prometheus.yml"
+PROMETHEUS_ALERTS = ROOT / "observability" / "prometheus" / "alerts" / "platform.yml"
+GRAFANA_DATASOURCE = ROOT / "observability" / "grafana" / "provisioning" / "datasources" / "prometheus.yml"
+GRAFANA_DASHBOARD_PROVIDER = ROOT / "observability" / "grafana" / "provisioning" / "dashboards" / "platform.yml"
+GRAFANA_DASHBOARD = ROOT / "observability" / "grafana" / "dashboards" / "platform-overview.json"
+CURRENT_RELEASE_EVIDENCE = ROOT / "docs" / "superpowers" / "release-evidence" / "current-platform-release.md"
 
 
 EXPECTED_PORTS = {
@@ -27,7 +54,6 @@ EXPECTED_PORTS = {
     "mail-service": "8701",
     "aa-proxy": "8702",
     "tts-proxy": "8700",
-    "any-auto-register": "8708",
     "postgres": "5432",
     "traefik": "80",
     "traefik-dashboard": "8080",
@@ -59,11 +85,11 @@ EXPECTED_SERVICE_TEST_COMMANDS = {
 EXPECTED_DESKTOP_CONFIG = {
     "API_BASE_URL": "http://localhost:8709/api/v1",
     "TTS_BASE_URL": "http://localhost:8700",
-    "AAR_BASE_URL": "http://localhost:8708",
 }
 
 EXPECTED_CONTRACT_ARTIFACTS = (
     ROOT / ".github" / "scripts" / "test_validate_runtime_truth.py",
+    TRAEFIK_ROUTE_VALIDATOR_TEST,
     ROOT / "common" / "tests" / "contracts" / "test_no_reverse_imports.py",
     ROOT / "common" / "tests" / "test_context.py",
     ROOT / "registrar" / "tests" / "unit" / "test_internal_client.py",
@@ -75,6 +101,15 @@ EXPECTED_CONTRACT_ARTIFACTS = (
     ROOT / "desktop-ui" / "src" / "__tests__" / "ConfigPage.test.tsx",
     ROOT / "desktop-ui" / "src" / "__tests__" / "AccountsPage.test.tsx",
     ROOT / "desktop-ui" / "src" / "__tests__" / "CreatePage.test.tsx",
+)
+
+EXPECTED_SERVICE_CI_ARTIFACTS = (
+    ROOT / "common" / ".github" / "workflows" / "ci.yml",
+    ROOT / "registrar" / ".github" / "workflows" / "ci.yml",
+    ROOT / "mail-service" / ".github" / "workflows" / "ci.yml",
+    ROOT / "aa-proxy" / ".github" / "workflows" / "ci.yml",
+    ROOT / "tts-proxy" / ".github" / "workflows" / "ci.yml",
+    ROOT / "desktop-ui" / ".github" / "workflows" / "ci.yml",
 )
 
 EXPECTED_SERVICE_TEST_FLOOR_ARTIFACTS = (
@@ -122,8 +157,13 @@ def _require_regex(errors: list[str], text: str, pattern: str, label: str) -> No
         errors.append(f"{label} missing pattern: {pattern}")
 
 
-def _extract_markdown_table(text: str, header: str) -> dict[str, str]:
+def _extract_markdown_table(text: str, header: str, value_column: str = "Command") -> dict[str, str]:
     lines = text.splitlines()
+    headers = [cell.strip() for cell in header.strip("|").split("|")]
+    try:
+        value_index = headers.index(value_column)
+    except ValueError:
+        value_index = 1
     for index, line in enumerate(lines):
         if line.strip() != header:
             continue
@@ -132,8 +172,8 @@ def _extract_markdown_table(text: str, header: str) -> dict[str, str]:
             if not row.startswith("|"):
                 break
             cells = [cell.strip() for cell in row.strip("|").split("|")]
-            if len(cells) >= 2:
-                rows[cells[0].strip("`")] = cells[1].strip("`")
+            if len(cells) > value_index:
+                rows[cells[0].strip("`")] = cells[value_index].strip("`")
         return rows
     return {}
 
@@ -146,11 +186,15 @@ def _stale_runtime_ports(text: str) -> list[str]:
     ]
 
 
+ROOT_OWNED_ARTIFACT_PREFIXES = (".github/", "docs/", "README.md", "docker-compose.yml", "pytest.ini")
+
+
 def _require_documented_artifact(errors: list[str], docs_text: str, artifact: Path, label: str) -> None:
-    if not artifact.exists():
+    artifact_path = str(artifact.relative_to(ROOT)).replace("\\", "/")
+    if artifact_path.startswith(ROOT_OWNED_ARTIFACT_PREFIXES) and not artifact.exists():
         errors.append(f"Missing expected artifact: {artifact.relative_to(ROOT)}")
         return
-    _require_contains(errors, docs_text, str(artifact.relative_to(ROOT)).replace("\\", "/"), label)
+    _require_contains(errors, docs_text, artifact_path, label)
 
 
 def main() -> int:
@@ -165,21 +209,53 @@ def main() -> int:
     release_runbook_text = _read_text(RELEASE_RUNBOOK)
     exit_review_text = _read_text(EXIT_REVIEW)
     internal_api_contract_text = _read_text(INTERNAL_API_CONTRACT)
-    desktop_config_text = _read_text(DESKTOP_CONFIG)
     pytest_ini_text = _read_text(PYTEST_INI)
     errors: list[str] = []
 
     _require_contains(errors, docs_consistency_workflow_text, "name: Docs Consistency", ".github/workflows/docs-consistency.yml")
     _require_contains(errors, docs_consistency_workflow_text, "python .github/scripts/validate_runtime_truth.py", ".github/workflows/docs-consistency.yml")
+    _require_contains(errors, docs_consistency_workflow_text, "python .github/scripts/validate_traefik_routes.py", ".github/workflows/docs-consistency.yml")
+    _require_contains(errors, docs_consistency_workflow_text, "pytest .github/scripts/test_validate_runtime_truth.py .github/scripts/test_validate_traefik_routes.py -q", ".github/workflows/docs-consistency.yml")
     _require_contains(errors, root_contract_workflow_text, "name: Root Orchestration Contract Checks", ".github/workflows/test-platform.yml")
     _require_contains(errors, root_contract_workflow_text, "root-orchestration-contract", ".github/workflows/test-platform.yml")
     _require_contains(errors, root_contract_workflow_text, "python .github/scripts/validate_runtime_truth.py", ".github/workflows/test-platform.yml")
+    _require_contains(errors, root_contract_workflow_text, "python .github/scripts/validate_traefik_routes.py", ".github/workflows/test-platform.yml")
+    _require_contains(errors, root_contract_workflow_text, "pytest .github/scripts/test_validate_runtime_truth.py .github/scripts/test_validate_traefik_routes.py -q", ".github/workflows/test-platform.yml")
     for forbidden_workflow_claim in ("service CI", "migration runner", "bootstrap-postgres"):
         if forbidden_workflow_claim in docs_consistency_workflow_text or forbidden_workflow_claim in root_contract_workflow_text:
             errors.append(f"Root workflows overclaim unsupported responsibility: {forbidden_workflow_claim}")
 
     published_ports = _extract_published_ports(compose)
 
+
+    postgres_healthcheck = compose.get("services", {}).get("postgres", {}).get("healthcheck", {}).get("test", [])
+    postgres_healthcheck_text = " ".join(str(part) for part in postgres_healthcheck)
+    if "pg_isready -U ccs -d account_creator" not in postgres_healthcheck_text:
+        errors.append("docker-compose.yml postgres healthcheck must check account_creator database, not implicit ccs database")
+
+    registrar_dockerfile = ROOT / "registrar" / "Dockerfile"
+    registrar_dockerfile_text = _read_text(registrar_dockerfile) if registrar_dockerfile.exists() else ""
+    if "http://localhost:8709/api/v1/health" not in registrar_dockerfile_text:
+        errors.append("registrar/Dockerfile healthcheck must hit /api/v1/health")
+
+    registrar_config = ROOT / "registrar" / "config" / "config.yaml"
+    registrar_config_text = _read_text(registrar_config) if registrar_config.exists() else ""
+    if "http://127.0.0.1:1421" not in registrar_config_text:
+        errors.append("registrar/config/config.yaml CORS origins must include http://127.0.0.1:1421 for Vite dev server")
+
+    runtime_smoke = ROOT / "scripts" / "smoke-runtime-contract.ps1"
+    if not runtime_smoke.exists():
+        errors.append("Missing expected artifact: scripts/smoke-runtime-contract.ps1")
+    else:
+        runtime_smoke_text = _read_text(runtime_smoke)
+        for expected_text in (
+            "build --no-cache registrar aa-proxy mail-service tts-proxy",
+            "Assert-ImageFileNotEmpty",
+            "http://localhost:8709/api/v1/health",
+            "Access-Control-Allow-Origin",
+            "http://127.0.0.1:1421",
+        ):
+            _require_contains(errors, runtime_smoke_text, expected_text, "scripts/smoke-runtime-contract.ps1")
     for service_name, expected_port in EXPECTED_PORTS.items():
         if service_name == "traefik-dashboard":
             actual = published_ports.get("traefik", set())
@@ -234,6 +310,18 @@ def main() -> int:
             _require_contains(errors, arch_text, expected_health, "docs/ARCHITECTURE.md")
             _require_contains(errors, api_text, f"Health endpoint: `{expected_health}`", "docs/API-ARCHITECTURE.md")
 
+    _require_contains(
+        errors,
+        readme_text,
+        "local orchestration truth, not a staging or production security posture",
+        "README.md",
+    )
+    _require_contains(
+        errors,
+        arch_text,
+        "not a staging or production security posture",
+        "docs/ARCHITECTURE.md",
+    )
     _require_regex(
         errors,
         arch_text,
@@ -254,15 +342,13 @@ def main() -> int:
     )
     _require_contains(errors, enterprise_standards_text, "PostgreSQL là runtime truth", "docs/ENTERPRISE-STANDARDS.md")
     _require_contains(errors, enterprise_standards_text, "SQLite chỉ còn dành cho", "docs/ENTERPRISE-STANDARDS.md")
-    _require_contains(errors, enterprise_standards_text, "legacy SQLite fixtures only", "docs/ENTERPRISE-STANDARDS.md")
+    _require_contains(errors, enterprise_standards_text, "SQLite chỉ còn dành cho", "docs/ENTERPRISE-STANDARDS.md")
     for envelope_field in ('"success"', '"data"', '"error"', '"meta"', '"request_id"'):
         _require_contains(errors, enterprise_standards_text, envelope_field, "docs/ENTERPRISE-STANDARDS.md")
         _require_contains(errors, api_text, envelope_field, "docs/API-ARCHITECTURE.md")
 
-    release_evidence_rows = _extract_markdown_table(
-        release_runbook_text,
-        "| Layer | Command | Commit SHA | Timestamp | Result |",
-    )
+    release_evidence_header = "| Layer | Repository | Commit SHA | Image tag or digest | Command | CI run URL | Timestamp | Result |"
+    release_evidence_rows = _extract_markdown_table(release_runbook_text, release_evidence_header)
     expected_release_evidence = {
         "root orchestration": "python .github/scripts/validate_runtime_truth.py",
         **EXPECTED_SERVICE_TEST_COMMANDS,
@@ -275,6 +361,12 @@ def main() -> int:
                 f"found `{release_evidence_rows.get(layer)}`"
             )
 
+    _require_contains(
+        errors,
+        testing_text,
+        "Root validation treats these service artifact paths as a documented cross-repo contract; it does not require ignored service worktrees to exist in root CI. Desktop runtime config values are enforced in root API docs and executable validation remains owned by `desktop-ui`.",
+        "docs/TESTING.md",
+    )
     for service_name, command in EXPECTED_SERVICE_TEST_COMMANDS.items():
         _require_contains(errors, testing_text, f"| `{service_name}` |", "docs/TESTING.md")
         _require_contains(errors, testing_text, f"`{command}`", "docs/TESTING.md")
@@ -282,14 +374,53 @@ def main() -> int:
             _require_contains(errors, pytest_ini_text, f"--ignore={service_name}", "pytest.ini")
             _require_contains(errors, pytest_ini_text, service_name, "pytest.ini")
 
-    _require_contains(errors, release_runbook_text, "| Layer | Command | Commit SHA | Timestamp | Result |", "docs/superpowers/runbooks/release-promotion-drill.md")
-    _require_contains(errors, release_runbook_text, "|-------|---------|------------|-----------|--------|", "docs/superpowers/runbooks/release-promotion-drill.md")
+    _require_contains(errors, release_runbook_text, release_evidence_header, "docs/superpowers/runbooks/release-promotion-drill.md")
+    _require_contains(errors, release_runbook_text, "|-------|------------|------------|---------------------|---------|------------|-----------|--------|", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "PostgreSQL migrations or bootstrap changes were exercised on a local fresh database for release rehearsal and on a fresh staging database before real promotion", "docs/superpowers/runbooks/release-promotion-drill.md")
     _require_contains(errors, release_runbook_text, "migration/bootstrap failure on PostgreSQL", "docs/superpowers/runbooks/release-promotion-drill.md")
-    for debt in ("GitOps deployment", "SOPS/AGE secrets", "Flyway migration execution", "Observability stack", "Full service CI matrix"):
+    for artifact in (
+        SOPS_CONFIG,
+        STAGING_SECRETS,
+        PROD_SECRETS,
+        STAGING_SECRETS_EXAMPLE,
+        PROD_SECRETS_EXAMPLE,
+        SECRETS_RUNBOOK,
+        STAGING_COMPOSE,
+        PROD_COMPOSE,
+        MIGRATIONS_COMPOSE,
+        OBSERVABILITY_COMPOSE,
+        DEPLOY_STAGING_WORKFLOW,
+        DEPLOY_PRODUCTION_WORKFLOW,
+        DB_MIGRATE_WORKFLOW,
+        RELEASE_EVIDENCE_WORKFLOW,
+        GITOPS_RUNBOOK,
+        MIGRATION_RUNBOOK,
+        OBSERVABILITY_RUNBOOK,
+        PLATFORM_MIGRATION,
+        PROMETHEUS_CONFIG,
+        PROMETHEUS_ALERTS,
+        GRAFANA_DATASOURCE,
+        GRAFANA_DASHBOARD_PROVIDER,
+        GRAFANA_DASHBOARD,
+        CURRENT_RELEASE_EVIDENCE,
+    ):
+        if not artifact.exists():
+            errors.append(f"Missing expected artifact: {artifact.relative_to(ROOT)}")
+    secrets_runbook_text = _read_text(SECRETS_RUNBOOK) if SECRETS_RUNBOOK.exists() else ""
+    for secret_key in ("DB_USER", "DB_PASSWORD", "DB_NAME", "DATABASE_URL", "INTERNAL_API_KEY", "SOPS_AGE_KEY"):
+        _require_contains(errors, secrets_runbook_text + _read_text(STAGING_SECRETS_EXAMPLE) + _read_text(PROD_SECRETS_EXAMPLE), secret_key, "SOPS/AGE secrets artifacts")
+    for debt in ("GitOps deployment", "SOPS/AGE secrets", "Flyway migration execution", "Observability stack", "Full service CI matrix", "Traefik public routing contract"):
         _require_contains(errors, exit_review_text, f"| {debt} |", "docs/superpowers/audits/enterprise-exit-review-2026-05-02.md")
+    artifact_text = "\n".join(_read_text(path) for path in (GITOPS_RUNBOOK, MIGRATION_RUNBOOK, OBSERVABILITY_RUNBOOK, DEPLOY_STAGING_WORKFLOW, DEPLOY_PRODUCTION_WORKFLOW, DB_MIGRATE_WORKFLOW, RELEASE_EVIDENCE_WORKFLOW))
+    for required_text in ("Deploy Staging", "Deploy Production", "Database Migration", "Release Evidence", "SOPS_AGE_KEY", "flyway", "prometheus", "grafana", "image tag or digest"):
+        _require_contains(errors, artifact_text, required_text, "platform hardening artifacts")
+    _require_documented_artifact(errors, api_text, TRAEFIK_ROUTE_CONTRACT, "docs/API-ARCHITECTURE.md")
+    _require_documented_artifact(errors, arch_text, TRAEFIK_ROUTE_CONTRACT, "docs/ARCHITECTURE.md")
+    _require_documented_artifact(errors, api_text, TRAEFIK_ROUTE_VALIDATOR, "docs/API-ARCHITECTURE.md")
+    _require_documented_artifact(errors, arch_text, TRAEFIK_ROUTE_VALIDATOR, "docs/ARCHITECTURE.md")
+    _require_documented_artifact(errors, api_text, TRAEFIK_ROUTE_SMOKE, "docs/API-ARCHITECTURE.md")
+    _require_contains(errors, exit_review_text, "| Traefik public routing contract | `docs/superpowers/contracts/traefik-public-routes.md`, `.github/scripts/validate_traefik_routes.py`, `.github/scripts/test_validate_traefik_routes.py`, and `scripts/smoke-traefik-routes.ps1` |", "docs/superpowers/audits/enterprise-exit-review-2026-05-02.md")
     _require_contains(errors, pytest_ini_text, "--ignore=desktop-ui", "pytest.ini")
-    _require_contains(errors, pytest_ini_text, "--ignore=any-auto-register", "pytest.ini")
 
     for artifact in EXPECTED_CONTRACT_ARTIFACTS:
         _require_documented_artifact(errors, testing_text, artifact, "docs/TESTING.md")
@@ -297,11 +428,12 @@ def main() -> int:
     for artifact in EXPECTED_SERVICE_TEST_FLOOR_ARTIFACTS:
         _require_documented_artifact(errors, testing_text, artifact, "docs/TESTING.md")
 
+    for artifact in EXPECTED_SERVICE_CI_ARTIFACTS:
+        _require_documented_artifact(errors, testing_text, artifact, "docs/TESTING.md")
+
     for name, value in EXPECTED_DESKTOP_CONFIG.items():
         _require_contains(errors, api_text, f"export const {name} = \"{value}\";", "docs/API-ARCHITECTURE.md")
-        _require_contains(errors, desktop_config_text, f"export const {name} = \"{value}\";", "desktop-ui/src/config.ts")
 
-    _require_contains(errors, api_text, "`AAR_BASE_URL` means `any-auto-register`", "docs/API-ARCHITECTURE.md")
     _require_contains(errors, api_text, "aa-proxy` at `http://localhost:8702`", "docs/API-ARCHITECTURE.md")
     _require_contains(errors, api_text, "docs/superpowers/contracts/internal-api.md", "docs/API-ARCHITECTURE.md")
     _require_contains(errors, internal_api_contract_text, "Required header: `X-Internal-Key`", "docs/superpowers/contracts/internal-api.md")
