@@ -1,0 +1,40 @@
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: ${DB_USER:?DB_USER required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
+      POSTGRES_DB: ${DB_NAME:?DB_NAME required}
+    ports: !reset []
+
+  traefik:
+    command:
+      - "--api.dashboard=true"
+      - "--providers.file.filename=/etc/traefik/traefik.yml"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:80"
+    ports: !override
+      - "80:80"
+
+  registrar:
+    image: ${REGISTRAR_IMAGE:?REGISTRAR_IMAGE required}
+    build: !reset null
+    environment:
+      - APP_ENV=prod
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL required}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:?INTERNAL_API_KEY required}
+    ports: !reset []
+
+  mail-service:
+    image: ${MAIL_SERVICE_IMAGE:?MAIL_SERVICE_IMAGE required}
+    build: !reset null
+    ports: !reset []
+
+  aa-proxy:
+    image: ${AA_PROXY_IMAGE:?AA_PROXY_IMAGE required}
+    build: !reset null
+    ports: !reset []
+
+  tts-proxy:
+    image: ${TTS_PROXY_IMAGE:?TTS_PROXY_IMAGE required}
+    build: !reset null
+    ports: !reset []

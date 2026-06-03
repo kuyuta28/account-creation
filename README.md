@@ -24,19 +24,17 @@ These directories are independent Git repositories and should be changed in thei
 | `tts-proxy/` | `8700` | TTS proxy |
 | `desktop-ui/` | `1421` | Tauri/React desktop UI |
 | `common/` | n/a | Shared Python package |
-| `any-auto-register/` | `8708` | External registration subsystem |
 
 ## Runtime orchestration
 
-The root workspace currently defines multi-service runtime composition through [`docker-compose.yml`](docker-compose.yml).
+The root workspace currently defines local multi-service runtime composition through [`docker-compose.yml`](docker-compose.yml). Its published ports and sample credentials are local orchestration truth, not a staging or production security posture.
 
-Canonical exposed service ports:
+Canonical local exposed service ports:
 
 - `registrar`: `8709`
 - `mail-service`: `8701`
 - `aa-proxy`: `8702`
 - `tts-proxy`: `8700`
-- `any-auto-register`: `8708`
 - `postgres`: `5432`
 - `traefik`: `80`, dashboard `8080`
 

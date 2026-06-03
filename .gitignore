@@ -1,7 +1,6 @@
 # Root orchestration repo only.
 # Service source code lives in independent repos and should not appear as root changes.
 aa-proxy/
-any-auto-register/
 common/
 desktop-ui/
 mail-service/
@@ -20,6 +19,7 @@ data/
 .claude/
 __pycache__/
 *.pyc
+config/sops-age-key.txt
 
 # Keep orchestration and docs visible
 !.github/

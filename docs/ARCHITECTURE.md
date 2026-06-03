@@ -16,7 +16,6 @@ The runtime is composed of:
 - `mail-service`
 - `aa-proxy`
 - `tts-proxy`
-- `any-auto-register`
 
 ## Repository Topology
 
@@ -40,7 +39,6 @@ Any architecture remediation spanning those services must be executed as coordin
 | `mail-service` | `8701` | Mailbox and provider management | FastAPI + Python |
 | `aa-proxy` | `8702` | Artificial Analysis proxy and image lab APIs | FastAPI + Python |
 | `tts-proxy` | `8700` | TTS proxy APIs | FastAPI + Python |
-| `any-auto-register` | `8708` | External registration subsystem | Python + Playwright |
 | `traefik` | `80` | Reverse proxy | Docker |
 | `postgres` | `5432` | Canonical relational database runtime in Compose | PostgreSQL |
 
@@ -52,10 +50,11 @@ Services communicate over Docker DNS names:
 - `http://mail-service:8701`
 - `http://aa-proxy:8702`
 - `http://tts-proxy:8700`
-- `http://any-auto-register:8708`
 - `postgres:5432`
 
 ## External Runtime URLs
+
+Current root Compose is a local orchestration artifact. Its published ports, Traefik dashboard exposure, and sample PostgreSQL credentials are not a staging or production security posture.
 
 Current root Compose publishes:
 
@@ -65,7 +64,6 @@ Current root Compose publishes:
 - mail-service: `http://localhost:8701/`
 - aa-proxy: `http://localhost:8702/`
 - tts-proxy: `http://localhost:8700/`
-- any-auto-register: `http://localhost:8708/`
 - PostgreSQL: `localhost:5432`
 
 ## Current API Prefixes
@@ -120,7 +118,7 @@ All root-compose services share the `account-net` bridge network.
 
 The primary gaps to close are:
 
-1. Traefik public routing contract
+1. Traefik public routing contract is checked in at `docs/superpowers/contracts/traefik-public-routes.md` and statically verified by `.github/scripts/validate_traefik_routes.py`
 2. service-local config duplication
 3. full service CI execution across repository boundaries
 4. multi-repo boundary ambiguity

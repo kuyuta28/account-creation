@@ -33,7 +33,6 @@ Each of these lives in its own Git repository and must be changed there, not via
 - `tts-proxy/`
 - `desktop-ui/`
 - `common/`
-- `any-auto-register/`
 
 ## Working Rule
 

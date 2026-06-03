@@ -18,7 +18,6 @@ These links point into sibling service worktrees. The root repo indexes them for
 | [tts-proxy](../tts-proxy/docs/README.md) | 8700 | [TTS API](../tts-proxy/docs/README.md) |
 | [aa-proxy](../aa-proxy/docs/README.md) | 8702 | [Image Lab](../aa-proxy/docs/aa-image-lab.md) |
 | [mail-service](../mail-service/docs/README.md) | 8701 | [Mail API](../mail-service/docs/mail.md) |
-| [any-auto-register](../any-auto-register/README.md) | 8708 | Browser automation |
 
 ## Infrastructure
 

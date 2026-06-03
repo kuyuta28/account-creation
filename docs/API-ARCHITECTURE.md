@@ -56,7 +56,7 @@ Traefik is published from the root Compose on:
 - web: `http://localhost/`
 - dashboard: `http://localhost:8080/`
 
-This document does not assert final Traefik path routing until those routes are verified and normalized during remediation.
+Traefik public routing is defined in [`docs/superpowers/contracts/traefik-public-routes.md`](superpowers/contracts/traefik-public-routes.md) and statically verified by `.github/scripts/validate_traefik_routes.py`. Runtime route smoke validation is available through `scripts/smoke-traefik-routes.ps1` when the stack is running.
 
 ## 3. Cross-Service Contract Reality
 
@@ -92,12 +92,11 @@ Current desktop runtime config resolves to:
 ```typescript
 export const API_BASE_URL = "http://localhost:8709/api/v1";
 export const TTS_BASE_URL = "http://localhost:8700";
-export const AAR_BASE_URL = "http://localhost:8708";
 ```
 
-The TTS and AAR clients must talk to their own service origins directly.
-They must not be routed through `registrar`.
-`AAR_BASE_URL` means `any-auto-register`; the Artificial Analysis proxy remains `aa-proxy` at `http://localhost:8702`.
+The TTS client must talk to its own service origin directly.
+It must not be routed through `registrar`.
+The Artificial Analysis proxy remains `aa-proxy` at `http://localhost:8702`.
 
 ## 6. Validation Ownership
 
