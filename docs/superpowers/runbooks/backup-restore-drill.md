@@ -49,7 +49,7 @@ head -n 5 data/backups/account_creator-*.sql
 4. Start the dependent services only after the restore verification passes.
 
 ```bash
-docker compose stop registrar mail-service aa-proxy tts-proxy any-auto-register
+docker compose stop registrar mail-service aa-proxy tts-proxy
 docker compose down postgres
 docker compose up -d postgres
 docker compose exec -T postgres psql -U ccs -d postgres -c "DROP DATABASE IF EXISTS account_creator_restore;"

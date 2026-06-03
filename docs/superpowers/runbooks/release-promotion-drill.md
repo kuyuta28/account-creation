@@ -64,17 +64,17 @@ Suggested order:
 
 ## Release Evidence Template
 
-Record this table before any staging or production promotion. Use the exact commit SHA from each owning repo or worktree.
+Record this table before any staging or production promotion. Use the exact commit SHA from each owning repo or worktree. The active evidence record lives at `docs/superpowers/release-evidence/current-platform-release.md`.
 
-| Layer | Command | Commit SHA | Timestamp | Result |
-|-------|---------|------------|-----------|--------|
-| root orchestration | `python .github/scripts/validate_runtime_truth.py` |  |  |  |
-| `common` | `PYTHONPATH=src pytest tests -q` |  |  |  |
-| `registrar` | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
-| `mail-service` | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
-| `aa-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
-| `tts-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
-| `desktop-ui` | `npm test -- --run` |  |  |  |
+| Layer | Repository | Commit SHA | Image tag or digest | Command | CI run URL | Timestamp | Result |
+|-------|------------|------------|---------------------|---------|------------|-----------|--------|
+| root orchestration | `account-creation` |  | n/a | `python .github/scripts/validate_runtime_truth.py` |  |  |  |
+| `common` | `common` |  | n/a | `PYTHONPATH=src pytest tests -q` |  |  |  |
+| `registrar` | `registrar` |  |  | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
+| `mail-service` | `mail-service` |  |  | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
+| `aa-proxy` | `aa-proxy` |  |  | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
+| `tts-proxy` | `tts-proxy` |  |  | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
+| `desktop-ui` | `desktop-ui` |  |  | `npm test -- --run` |  |  |  |
 
 ## Rollback Triggers
 

@@ -119,8 +119,7 @@ account-creation/
     ├── registrar/
     ├── mail-service/
     ├── aa-proxy/
-    ├── tts-proxy/
-    └── any-auto-register/
+    └── tts-proxy/
 ```
 
 ### 3.2 Config Validation Pipeline

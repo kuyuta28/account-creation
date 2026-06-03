@@ -151,4 +151,3 @@ Consumers must treat HTTP status as authoritative and not assume an envelope on 
 
 - Other services must not import registrar storage/database modules directly.
 - Other services must not read or mutate registrar account state except through this HTTP contract.
-- `any-auto-register` is outside this contract and must remain behind its own HTTP boundary.

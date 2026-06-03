@@ -119,8 +119,7 @@ account-creation/
     ├── registrar/
     ├── mail-service/
     ├── aa-proxy/
-    ├── tts-proxy/
-    └── any-auto-register/
+    └── tts-proxy/
 ```
 
 **Key Points:**

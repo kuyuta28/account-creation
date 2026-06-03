@@ -14,7 +14,6 @@ This audit captures the actual runtime and repository state before enterprise re
   - mail-service on `8701`
   - aa-proxy on `8702`
   - tts-proxy on `8700`
-  - any-auto-register on `8708`
 - Service route prefixes currently in code:
   - registrar: `/api/v1/*`
   - mail-service: `/api/v1/*`
@@ -45,13 +44,11 @@ This audit captures the actual runtime and repository state before enterprise re
 - `desktop-ui/src/config.ts` currently points to:
   - `API_BASE_URL=http://localhost:8709/api/v1`
   - `TTS_BASE_URL=http://localhost:8709/tts`
-  - `AAR_BASE_URL=http://localhost:8709/aa`
 - Those UI values do not match the documented reverse-proxy contract.
 
 ### 2. Dependency boundary drift
 
 - `registrar/main.py`, `registrar/run_api.py`, and `tts-proxy/src/tts_proxy/server.py` use `sys.path.insert(...)`.
-- `registrar` startup also injects `any-auto-register` source directly into runtime import resolution.
 - `common/src/common/context.py` imports service-specific types from `registrar` and `mail-service`.
 
 ### 3. Persistence ambiguity

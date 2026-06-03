@@ -4,7 +4,7 @@
 
 **Goal:** Transform `account-creation` into a platform with hard service boundaries, one enforced operating model, measurable deployment/runtime truth, and enough test/ops discipline that the architecture claim is provable rather than aspirational.
 
-**Architecture:** This plan is intentionally opinionated. It removes undecided branches before implementation starts. The platform target is: `common` is service-agnostic, service startup has no path hacks, `any-auto-register` is consumed only over HTTP, PostgreSQL is the canonical runtime database, SQLite is allowed only for legacy read-only migration utilities or isolated tests, service config is loaded through one shared loader, and docs/compose/UI routing/CI must agree on one runtime truth.
+**Architecture:** This plan is intentionally opinionated. It removes undecided branches before implementation starts. The platform target is: `common` is service-agnostic, service startup has no path hacks, PostgreSQL is the canonical runtime database, SQLite is allowed only for legacy read-only migration utilities or isolated tests, service config is loaded through one shared loader, and docs/compose/UI routing/CI must agree on one runtime truth.
 
 **Tech Stack:** Python 3.10+, FastAPI, SQLAlchemy, PostgreSQL, Docker Compose, GitHub Actions, OpenTelemetry, Prometheus, Grafana, Loki, Jaeger, React 18, Tauri 2, pytest, Vitest, Playwright.
 
@@ -34,16 +34,16 @@ These are no longer open questions. Workers must not re-decide them mid-flight.
    - fix schema with compensating `V_next__...` migrations
    - restore from backup for destructive corruption scenarios
 
-3. **AAR integration boundary**
-   `any-auto-register` is treated as an external subsystem consumed over HTTP.
-   `registrar` and other services must not import or path-inject AAR source code at runtime.
+3. **Service integration boundary**
+   Services are integrated only over HTTP.
+   No service may import or path-inject another service's source code at runtime.
 
 4. **Shared package rule**
    `common` may depend only on:
    - stdlib
    - third-party libraries
    - other `common` modules
-   It may not import service code from `registrar`, `mail-service`, `aa-proxy`, `tts-proxy`, or `any-auto-register`.
+   It may not import service code from `registrar`, `mail-service`, `aa-proxy`, or `tts-proxy`.
 
 5. **Runtime packaging rule**
    No production entrypoint may use `sys.path.insert(...)` to resolve first-party code.
@@ -94,7 +94,6 @@ The project is considered 10/10 only if all are true:
 - `desktop-ui/src/App.tsx`
 - `desktop-ui/src/config.ts`
 - `desktop-ui/src/api/client.ts`
-- `desktop-ui/src/api/aar-client.ts`
 - `desktop-ui/src/api/tts.ts`
 - `common/src/common/context.py`
 - `common/src/common/database/__init__.py`
@@ -246,7 +245,7 @@ Assertions:
 Test file: `desktop-ui/src/__tests__/config.contract.test.ts`
 
 Assertions:
-- `API_BASE_URL`, `TTS_BASE_URL`, and `AAR_BASE_URL` match the documented runtime contract
+- `API_BASE_URL` and `TTS_BASE_URL` match the documented runtime contract
 
 - [ ] **Step 4: Run the new safety-net tests**
 
@@ -634,7 +633,7 @@ git commit -m "test: enforce fresh-db migration bootstrap"
 
 ---
 
-## Chunk 6: AAR Boundary And Internal Contract
+## Chunk 6: Service Boundary And Internal Contract
 
 ### Task 11: Standardize the internal service contract
 
@@ -682,36 +681,7 @@ git add docs/superpowers/contracts/internal-api.md common/src/common/internal_cl
 git commit -m "refactor: formalize internal service contract"
 ```
 
-### Task 12: Remove source-tree AAR embedding and force HTTP boundary
-
-**Files:**
-- Modify: `registrar/main.py`
-- Modify: `registrar/run_api.py`
-- Modify: `desktop-ui/src/App.tsx`
-- Modify: `desktop-ui/src/config.ts`
-- Modify: `desktop-ui/src/api/aar-client.ts`
-
-- [ ] **Step 1: Write failing AAR boundary tests**
-
-Back-end assertions:
-- no startup path injection for AAR
-- AAR access happens through configured URL/client only
-
-Front-end assertions:
-- AAR base URL is explicit and environment-driven
-
-- [ ] **Step 2: Run AAR-related tests**
-
-- [ ] **Step 3: Remove raw AAR source-path coupling**
-
-- [ ] **Step 4: Re-run AAR backend and UI tests**
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add registrar/main.py registrar/run_api.py desktop-ui/src/App.tsx desktop-ui/src/config.ts desktop-ui/src/api/aar-client.ts
-git commit -m "refactor: isolate any-auto-register behind HTTP boundary"
-```
+### Task 12: (removed - external subsystem no longer in scope)
 
 ---
 
@@ -755,7 +725,6 @@ git commit -m "feat: unify telemetry initialization"
 - Modify: `desktop-ui/src/config.ts`
 - Modify: `desktop-ui/src/api/client.ts`
 - Modify: `desktop-ui/src/api/tts.ts`
-- Modify: `desktop-ui/src/api/aar-client.ts`
 - Modify: `desktop-ui/src/__tests__/config.contract.test.ts`
 
 - [ ] **Step 1: Write failing assertions for current UI base URLs**
@@ -763,7 +732,6 @@ git commit -m "feat: unify telemetry initialization"
 Check:
 - `API_BASE_URL`
 - `TTS_BASE_URL`
-- `AAR_BASE_URL`
 - path concatenation rules in API clients
 
 - [ ] **Step 2: Run UI config contract tests**
@@ -780,7 +748,7 @@ cd desktop-ui && npm test -- --run src/__tests__/config.contract.test.ts
 - [ ] **Step 5: Commit**
 
 ```bash
-git add desktop-ui/src/config.ts desktop-ui/src/api/client.ts desktop-ui/src/api/tts.ts desktop-ui/src/api/aar-client.ts desktop-ui/src/__tests__/config.contract.test.ts
+git add desktop-ui/src/config.ts desktop-ui/src/api/client.ts desktop-ui/src/api/tts.ts desktop-ui/src/__tests__/config.contract.test.ts
 git commit -m "fix: align desktop UI runtime config with backend contract"
 ```
 
@@ -958,7 +926,7 @@ git commit -m "docs: record enterprise remediation exit review"
 3. Chunk 3: remove illegal dependency boundaries
 4. Chunk 4: canonical config architecture
 5. Chunk 5: database truth and migration discipline
-6. Chunk 6: AAR boundary and internal contract
+6. Chunk 6: service boundary and internal contract
 7. Chunk 7: observability and runtime consistency
 8. Chunk 8: deployment, docs, and CI truth alignment
 9. Chunk 9: runbooks and human operability
@@ -979,7 +947,6 @@ The platform is only “10/10 enterprise-ready” when all of these are simultan
 
 - All first-party runtime dependencies resolve without path hacks.
 - `common` does not import any service implementation module.
-- `any-auto-register` is consumed only through HTTP boundary code.
 - PostgreSQL is the documented and tested runtime truth in prod/staging.
 - SQLite is not described or used as production truth anywhere.
 - Service config loading is centralized in `common.config`.
