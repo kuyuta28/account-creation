@@ -1,0 +1,52 @@
+name: Deploy Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      registrar_image:
+        required: true
+        type: string
+      mail_service_image:
+        required: true
+        type: string
+      aa_proxy_image:
+        required: true
+        type: string
+      tts_proxy_image:
+        required: true
+        type: string
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deployment tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sops age
+      - name: Decrypt staging secrets
+        run: |
+          test -n "$SOPS_AGE_KEY"
+          printf '%s' "$SOPS_AGE_KEY" > age.key
+          SOPS_AGE_KEY_FILE=age.key sops --decrypt config/staging/secrets.yaml > .env
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+      - name: Add service image inputs
+        run: |
+          {
+            echo "REGISTRAR_IMAGE=${{ inputs.registrar_image }}"
+            echo "MAIL_SERVICE_IMAGE=${{ inputs.mail_service_image }}"
+            echo "AA_PROXY_IMAGE=${{ inputs.aa_proxy_image }}"
+            echo "TTS_PROXY_IMAGE=${{ inputs.tts_proxy_image }}"
+          } >> .env
+      - name: Validate staging compose
+        run: docker compose --env-file .env -f docker-compose.yml -f docker-compose.staging.yml config
+      - name: Run database migrations
+        run: docker compose --env-file .env -f docker-compose.yml -f docker-compose.staging.yml -f docker-compose.migrations.yml run --rm flyway
+      - name: Deploy staging stack
+        run: docker compose --env-file .env -f docker-compose.yml -f docker-compose.staging.yml up -d
+      - name: Smoke Traefik routes
+        shell: pwsh
+        run: ./scripts/smoke-traefik-routes.ps1 -BaseUrl http://localhost
