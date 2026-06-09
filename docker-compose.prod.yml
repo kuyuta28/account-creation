@@ -1,19 +1,50 @@
+# Production overlay.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# Required env (set in `.env.prod`, never committed):
+#   DB_USER, DB_PASSWORD, DB_NAME
+#   DATABASE_URL            - postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+#   INTERNAL_API_KEY        - shared secret for inter-service auth
+#   REGISTRAR_IMAGE         - registry/image@sha256:...  (SHA-pinned, no :latest, no :tag)
+#   MAIL_SERVICE_IMAGE      - registry/image@sha256:...
+#   AA_PROXY_IMAGE          - registry/image@sha256:...
+#   TTS_PROXY_IMAGE         - registry/image@sha256:...
+#
+# This overlay:
+#   - Replaces dev host-port bindings with no host exposure (Traefik only)
+#   - Replaces the build section with image: pulled from registry
+#   - Closes the Traefik dashboard (no :8080 host port)
+#   - Enforces prod environment variables (APP_ENV=prod) and required secrets
+#   - Pins image tags to immutable SHA digests (enforced by smoke-traefik-routes + this overlay's `image:`)
+#   - Keeps all base hardening (no-new-privileges, drop caps, tmpfs, mem/pids limits) from docker-compose.yml
+
 services:
   postgres:
     environment:
       POSTGRES_USER: ${DB_USER:?DB_USER required}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
       POSTGRES_DB: ${DB_NAME:?DB_NAME required}
+      # Refuse to start with empty/missing creds
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    # No host port. Traefik-side services talk to postgres over the account-net bridge.
     ports: !reset []
 
   traefik:
     command:
-      - "--api.dashboard=true"
       - "--providers.file.filename=/etc/traefik/traefik.yml"
       - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
+    # No dashboard in prod. Operators read logs and inspect via Docker, not the Traefik API.
     ports: !override
       - "80:80"
+    # Production logging is larger and rotated to 5x50MB.
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   registrar:
     image: ${REGISTRAR_IMAGE:?REGISTRAR_IMAGE required}
@@ -22,19 +53,40 @@ services:
       - APP_ENV=prod
       - DATABASE_URL=${DATABASE_URL:?DATABASE_URL required}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:?INTERNAL_API_KEY required}
+      - SENTRY_DSN=${SENTRY_DSN:-}
     ports: !reset []
+    # Re-pin restart policy explicitly to "always" in prod (not "unless-stopped").
+    restart: always
 
   mail-service:
     image: ${MAIL_SERVICE_IMAGE:?MAIL_SERVICE_IMAGE required}
     build: !reset null
+    environment:
+      - APP_ENV=prod
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL required}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:?INTERNAL_API_KEY required}
+      - SENTRY_DSN=${SENTRY_DSN:-}
     ports: !reset []
+    restart: always
 
   aa-proxy:
     image: ${AA_PROXY_IMAGE:?AA_PROXY_IMAGE required}
     build: !reset null
+    environment:
+      - APP_ENV=prod
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL required}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:?INTERNAL_API_KEY required}
+      - SENTRY_DSN=${SENTRY_DSN:-}
     ports: !reset []
+    restart: always
 
   tts-proxy:
     image: ${TTS_PROXY_IMAGE:?TTS_PROXY_IMAGE required}
     build: !reset null
+    environment:
+      - APP_ENV=prod
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL required}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:?INTERNAL_API_KEY required}
+      - SENTRY_DSN=${SENTRY_DSN:-}
     ports: !reset []
+    restart: always

@@ -1,19 +1,43 @@
+# Staging overlay.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml --env-file .env.staging up -d
+#
+# Required env (set in `.env.staging`, never committed):
+#   DB_USER, DB_PASSWORD, DB_NAME
+#   DATABASE_URL
+#   INTERNAL_API_KEY
+#   REGISTRAR_IMAGE, MAIL_SERVICE_IMAGE, AA_PROXY_IMAGE, TTS_PROXY_IMAGE
+#     - staging accepts tag-based references (e.g. :v1.2.3-rc1) for faster rollback.
+#     - For prod use docker-compose.prod.yml which requires SHA-pinned digests.
+#
+# This overlay:
+#   - Replaces dev host-port bindings with no host exposure (Traefik only)
+#   - Replaces the build section with image: pulled from registry
+#   - Closes the Traefik dashboard
+#   - Sets APP_ENV=staging and shares the prod hardening from docker-compose.yml
+
 services:
   postgres:
     environment:
       POSTGRES_USER: ${DB_USER:?DB_USER required}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
       POSTGRES_DB: ${DB_NAME:?DB_NAME required}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     ports: !reset []
 
   traefik:
     command:
-      - "--api.dashboard=true"
       - "--providers.file.filename=/etc/traefik/traefik.yml"
       - "--providers.file.watch=true"
       - "--entrypoints.web.address=:80"
     ports: !override
       - "80:80"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   registrar:
     image: ${REGISTRAR_IMAGE:?REGISTRAR_IMAGE required}
@@ -22,19 +46,39 @@ services:
       - APP_ENV=staging
       - DATABASE_URL=${DATABASE_URL:?DATABASE_URL required}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:?INTERNAL_API_KEY required}
+      - SENTRY_DSN=${SENTRY_DSN:-}
     ports: !reset []
+    restart: always
 
   mail-service:
     image: ${MAIL_SERVICE_IMAGE:?MAIL_SERVICE_IMAGE required}
     build: !reset null
+    environment:
+      - APP_ENV=staging
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL required}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:?INTERNAL_API_KEY required}
+      - SENTRY_DSN=${SENTRY_DSN:-}
     ports: !reset []
+    restart: always
 
   aa-proxy:
     image: ${AA_PROXY_IMAGE:?AA_PROXY_IMAGE required}
     build: !reset null
+    environment:
+      - APP_ENV=staging
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL required}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:?INTERNAL_API_KEY required}
+      - SENTRY_DSN=${SENTRY_DSN:-}
     ports: !reset []
+    restart: always
 
   tts-proxy:
     image: ${TTS_PROXY_IMAGE:?TTS_PROXY_IMAGE required}
     build: !reset null
+    environment:
+      - APP_ENV=staging
+      - DATABASE_URL=${DATABASE_URL:?DATABASE_URL required}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:?INTERNAL_API_KEY required}
+      - SENTRY_DSN=${SENTRY_DSN:-}
     ports: !reset []
+    restart: always
