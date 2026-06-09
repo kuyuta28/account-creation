@@ -1,0 +1,32 @@
+# Migration overlay — Flyway runner.
+# Runs once (or per-invocation) and exits. Wire into the up flow via
+# `docker compose -f docker-compose.yml -f docker-compose.migrations.yml run --rm flyway`
+# or by `pwsh scripts/docker-up.ps1` which now does this automatically before
+# bringing up the app services.
+#
+# Dev defaults: DB_USER=ccs DB_PASSWORD=ccs_secret DB_NAME=account_creator
+# Prod: pass --env-file .env.prod with DB_USER/DB_PASSWORD/DB_NAME.
+#
+# The flyway container does NOT keep running; it is a one-shot job.
+services:
+  flyway:
+    image: flyway/flyway:10-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations/sql:/flyway/sql:ro
+    command:
+      - "-validateOnMigrate=true"
+      - "-baselineOnMigrate=true"
+      - "-connectRetries=10"
+      - "migrate"
+    environment:
+      # Use the same defaults as docker-compose.yml so dev works without --env-file.
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-account_creator}
+      FLYWAY_USER: ${DB_USER:-ccs}
+      FLYWAY_PASSWORD: ${DB_PASSWORD:-ccs_secret}
+    networks:
+      - account-net
+      - postgres-internal
+    restart: "no"   # one-shot
