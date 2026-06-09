@@ -4,6 +4,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 COMPOSE = ROOT / "docker-compose.yml"
 
+POSTGRES_BACKED = ("mail-service", "aa-proxy", "tts-proxy")
+SQLITE_BACKED = ("registrar",)
+ALL_APP_SERVICES = POSTGRES_BACKED + SQLITE_BACKED
+
+DEV_PASSWORD = "ccs_dev_only"
+
 
 def _service_block(source: str, service: str) -> str:
     lines = source.splitlines()
@@ -12,32 +18,47 @@ def _service_block(source: str, service: str) -> str:
     return "\n".join(lines[start:end])
 
 
-def test_runtime_services_receive_postgres_database_url():
-    """Dev compose must NOT set DATABASE_URL on app services (they stay on
-    SQLite). The prod overlay sets DATABASE_URL from the host env. We assert
-    the absence in dev so a future refactor that accidentally re-adds it
-    gets caught here."""
+def test_postgres_backed_services_get_dev_database_url():
+    """mail-service, aa-proxy, tts-proxy all use the async Postgres layer and
+    need DATABASE_URL in dev. The DSN must point at the dev postgres with
+    the dev-only password (NOT the historical ccs_secret)."""
     source = COMPOSE.read_text(encoding="utf-8")
-    # `DATABASE_URL` may appear in the postgres block (its bootstrap env) or
-    # in the migrations overlay (Flyway). It must NOT appear in any app
-    # service env block in the base dev compose.
-    app_services = ("registrar", "mail-service", "aa-proxy", "tts-proxy")
-    for service in app_services:
+    for service in POSTGRES_BACKED:
         block = _service_block(source, service)
-        assert "DATABASE_URL" not in block, (
-            f"{service} sets DATABASE_URL in dev compose. The dev stack "
-            f"stays on the local SQLite mirror; only the prod/staging "
-            f"overlay should set DATABASE_URL."
+        assert f"DATABASE_URL: postgresql+asyncpg://ccs:{DEV_PASSWORD}@postgres:5432/account_creator" in block, (
+            f"{service} missing dev DATABASE_URL with {DEV_PASSWORD}"
         )
-    for service in app_services:
+
+
+def test_sqlite_backed_service_has_no_database_url():
+    """registrar's gmail router still uses the SQLite sync helpers. If
+    DATABASE_URL is set the _db_path() helper raises a loud RuntimeError,
+    which is the desired behavior until the call sites are migrated."""
+    source = COMPOSE.read_text(encoding="utf-8")
+    block = _service_block(source, "registrar")
+    assert "DATABASE_URL" not in block, (
+        "registrar's gmail router still uses the SQLite sync helpers. "
+        "Do not set DATABASE_URL on registrar in dev."
+    )
+
+
+def test_dev_password_is_distinct_from_prod():
+    """A leaked compose file must never match a real production password."""
+    source = COMPOSE.read_text(encoding="utf-8")
+    assert "ccs_secret" not in source, "dev compose contains prod-like 'ccs_secret'"
+    assert DEV_PASSWORD in source
+
+
+def test_app_services_inherit_x_app_env_anchor():
+    source = COMPOSE.read_text(encoding="utf-8")
+    for service in ALL_APP_SERVICES:
         block = _service_block(source, service)
         assert "<<: *app-env" in block, f"{service} does not inherit x-app-env"
 
 
 def test_postgres_backed_services_wait_for_postgres_health():
     source = COMPOSE.read_text(encoding="utf-8")
-
-    for service in ("registrar", "mail-service", "aa-proxy", "tts-proxy"):
+    for service in ALL_APP_SERVICES:
         block = _service_block(source, service)
         assert "postgres:" in block
         assert "condition: service_healthy" in block

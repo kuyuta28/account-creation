@@ -29,13 +29,12 @@ x-limits-browser: &limits-browser
   mem_limit: 3g
 
 x-app-env: &app-env
-  # Dev stack: keep services on the local SQLite mirror under /app/data so
-  # the existing router code paths work unchanged. Postgres is still up and
-  # reachable (for migrations + ad-hoc psql) but the app services do not
-  # connect to it. The prod overlay (docker-compose.prod.yml) sets
-  # DATABASE_URL explicitly; when that happens the `_db_path()` helper in
-  # the gmail router raises a RuntimeError so the mismatch is loud, not
-  # silent.
+  # Shared env for every app service. DATABASE_URL is intentionally NOT here:
+  # the gmail router in registrar still uses the SQLite sync helpers, so it
+  # cannot run with DATABASE_URL set (the _db_path() helper raises a loud
+  # RuntimeError). mail-service / aa-proxy / tts-proxy all use the async
+  # Postgres layer and need DATABASE_URL — they set it directly in their own
+  # env block.
   INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
   SENTRY_DSN: ${SENTRY_DSN:-}
   APP_ENV: ${APP_ENV:-dev}
@@ -151,6 +150,7 @@ services:
       dockerfile: mail-service/Dockerfile
     environment:
       MAIL_PORT: 8701
+      DATABASE_URL: postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator
       <<: *app-env
     ports:
       - "127.0.0.1:8701:8701"
@@ -177,6 +177,7 @@ services:
       dockerfile: aa-proxy/Dockerfile
     environment:
       AA_PORT: 8702
+      DATABASE_URL: postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator
       <<: *app-env
     ports:
       - "127.0.0.1:8702:8702"
@@ -202,6 +203,7 @@ services:
       dockerfile: tts-proxy/Dockerfile
     environment:
       TTS_PORT: 8700
+      DATABASE_URL: postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator
       <<: *app-env
     ports:
       - "127.0.0.1:8700:8700"

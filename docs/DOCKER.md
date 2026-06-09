@@ -70,6 +70,25 @@ tts-proxy has no browser, image ≈ 1.1 GB.
 | Host exposure | All app ports bound to `127.0.0.1`. Traefik dashboard bound to `127.0.0.1:8080` in dev, closed in prod via overlay |
 | Postgres data | Docker named volume `account-creation_postgres_data`. Never bind-mount the data dir on Windows (WAL+filesystem performance) |
 
+## What the migration overlay covers (and what it does not)
+
+`docker-compose.migrations.yml` runs Flyway on startup. Today it ships
+`V001__platform_bootstrap.sql` and `V002__tts_rpd.sql`, both of which
+only create top-level schemas (`platform`, `tts`) and revision notes.
+The actual application tables (`accounts`, `accounts_gmail`, …) are
+NOT in the migration scripts — they are created by the first app
+service that calls SQLAlchemy's `Base.metadata.create_all()` at boot.
+
+On a brand-new Postgres volume that is fine: bring up the stack
+(`docker compose up -d` followed by the migration overlay), the next
+restart of an app service will create the tables. On a non-empty
+volume (e.g. imported via the legacy-SQLite importer script) the
+tables already exist and this step is a no-op.
+
+If you ever see `relation "accounts" does not exist` on a fresh
+volume, run the migration overlay **and then restart the failing
+service** so it has a chance to call `create_all()`.
+
 ## Service env
 
 All env in compose uses the `${VAR:?VAR required}` mandatory form for prod/staging
