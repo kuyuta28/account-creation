@@ -48,6 +48,10 @@ services:
       POSTGRES_PASSWORD: ccs_secret
       POSTGRES_DB: account_creator
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      # Force SCRAM-SHA-256 (Postgres 14+ default, but be explicit so the
+      # cluster rejects MD5/legacy clients). Affects only newly-initialized
+      # databases; existing data is untouched.
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
     # Host-side psql/migration tools reach Postgres on 127.0.0.1:5432 in dev.
     # Prod/staging overlay resets this to [] (no host port).
     ports:
