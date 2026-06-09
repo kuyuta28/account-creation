@@ -1,0 +1,71 @@
+# VCS and local tooling
+.git
+.gitignore
+.claude
+.agents
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+.DS_Store
+Thumbs.db
+
+# Local environments and dependency caches
+.venv
+venv
+env
+**/.venv
+**/venv
+**/env
+node_modules
+**/node_modules
+npm-debug.log*
+.pnpm-store
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+
+# Runtime data, logs, screenshots, and generated artifacts
+data
+**/data
+**/logs
+**/debug
+**/screenshots
+**/*.log
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.db.bak
+*.db.*.bak
+**/test_*.db
+**/*_test.db
+
+# Root docs and CI artifacts not required in service image build contexts
+docs
+.github
+observability
+migrations
+config
+scripts
+
+# Service repos not needed unless explicitly copied by Dockerfile
+content-vault
+
+# Secrets
+.env
+.env.*
+!.env.example
+config/sops-age-key.txt
+config/**/secrets.yaml
+config/**/secrets.yml
+
+# Editor / IDE
+.vscode
+.idea
+*.swp
