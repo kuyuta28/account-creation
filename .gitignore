@@ -23,6 +23,10 @@ __pycache__/
 *.pyc
 config/sops-age-key.txt
 
+# Playwright MCP cache. Created by the chrome-devtools-mcp tool on every
+# browser session; safe to delete, will be regenerated on next run.
+.playwright-mcp/
+
 # Keep orchestration and docs visible
 !.github/
 !docs/
