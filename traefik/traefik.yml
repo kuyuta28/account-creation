@@ -1,13 +1,30 @@
 # Static configuration
+#
+# Dashboard control:
+#   - Dev: traefik command includes `--api.insecure=true` and compose binds 127.0.0.1:8080
+#   - Prod: docker-compose.prod.yml drops both, so the dashboard is unreachable.
+#   To fully remove the API even in dev, edit docker-compose.yml and remove
+#   the `--api.insecure=true` arg from traefik.command.
 api:
   insecure: true
+  dashboard: true
 
 entryPoints:
   web:
     address: ":80"
 
 log:
-  level: DEBUG
+  level: INFO   # DEBUG in dev override via env if needed
+
+accessLog:
+  format: common
+  filters:
+    statusCodes:
+      - "100-599"
+  fields:
+    defaultMode: keep
+    headers:
+      defaultMode: drop
 
 providers:
   file:
@@ -17,6 +34,7 @@ providers:
 # Dynamic configuration
 http:
   middlewares:
+    # Strip /<service> prefix before forwarding to backend.
     strip-mail:
       stripPrefix:
         prefixes:
@@ -30,25 +48,62 @@ http:
         prefixes:
           - "/aa"
 
+    # Public rate limit: 100 req/s average, 50 burst. Anything above returns 429.
+    # Tight enough to slow brute-force, loose enough to not break the desktop UI.
+    rate-limit-public:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 0   # trust the closest proxy / direct peer
+
+    # Stricter limit on /api/* because registration endpoints are expensive.
+    rate-limit-api:
+      rateLimit:
+        average: 20
+        burst: 10
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 0
+
+    # Retry idempotent calls once. Traefik v3 only takes attempts + initialInterval;
+    # it retries on 5xx and network errors automatically.
+    retry-safe:
+      retry:
+        attempts: 2
+        initialInterval: 200ms
+
   routers:
     mail:
       rule: "PathPrefix(`/mail`)"
       service: mail-service
       middlewares:
         - strip-mail
+        - rate-limit-public
+        - retry-safe
     tts:
       rule: "PathPrefix(`/tts`)"
       service: tts-proxy
       middlewares:
         - strip-tts
+        - rate-limit-public
+        - retry-safe
     aa:
       rule: "PathPrefix(`/aa`)"
       service: aa-proxy
       middlewares:
         - strip-aa
+        - rate-limit-public
+        - retry-safe
     api:
-      rule: "PathPrefix(`/api`)"
+      rule: "PathPrefix(`/api/v1`)"
       service: registrar
+      middlewares:
+        - rate-limit-api
+        - retry-safe
 
   services:
     mail-service:
