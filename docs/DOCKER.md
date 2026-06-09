@@ -116,6 +116,29 @@ $env:PRUNE_VOLUMES=1; pwsh scripts/docker-down.ps1   # also drop Postgres
 grace period (default 10 s) before `SIGKILL`. Healthchecks go `unhealthy` →
 service is restarted by `restart: unless-stopped` policy unless explicitly stopped.
 
+## Performance (Windows host)
+
+Bind-mounts on Windows host (Docker Desktop + WSL2) are **dramatically slower**
+than Linux native volumes, because every file operation crosses the 9P
+filesystem boundary.
+
+Mitigations already in `docker-compose.yml`:
+
+| Path | Mount | Why |
+|---|---|---|
+| `postgres_data` (Postgres) | named volume | Hot WAL writes; bind-mount would kill throughput |
+| `registrar-data` (`/app/data` in registrar) | named volume | Screenshots / browser cache write a lot |
+| `mail-service-data` (`/app/data` in mail-service) | named volume | Same reason |
+| `*/logs`, `*/config`, `*/debug`, `*/screenshots` | bind-mount | Read-mostly or low-volume; easier to inspect from host |
+| `traefik/traefik.yml` | bind-mount :ro | Operator must be able to edit on host |
+
+If you ever see a container stalling on disk I/O, suspect a bind-mount first.
+Convert it to a named volume and you will almost certainly see a 5-20×
+improvement on Windows.
+
+For real production on Windows, run the stack on a Linux VM or remote host.
+Windows Desktop is fine for dev but never deploy from it.
+
 ## Backup & restore
 
 Postgres data lives in the `account-creation_postgres_data` named volume. Two
