@@ -1,4 +1,18 @@
-version: '3.8'
+# Root orchestration: dev/staging local
+# For prod/staging release use docker-compose.{prod,staging}.yml
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+x-common-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+  read_only: false   # services write to /app/{data,logs,debug,screenshots} and /tmp; tmpfs handles /tmp
+  restart: unless-stopped
+  logging: *default-logging
 
 services:
   postgres:
@@ -8,8 +22,10 @@ services:
       POSTGRES_USER: ccs
       POSTGRES_PASSWORD: ccs_secret
       POSTGRES_DB: account_creator
+    # Postgres is reachable from host for local tooling (psql, migrations).
+    # For prod/staging override with ports: !reset [] in prod overlay.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -19,6 +35,23 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    logging: *default-logging
+    # Postgres needs writable data dir; cannot use read_only:true.
+    # Mitigate with no-new-privileges + drop capabilities + pids/mem limits.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
+    pids_limit: 200
+    mem_limit: 1g
+    shm_size: 256m
 
   traefik:
     image: traefik:v3.0
@@ -30,12 +63,19 @@ services:
       - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
     networks:
       - account-net
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     restart: unless-stopped
+    logging: *default-logging
+    pids_limit: 200
+    mem_limit: 256m
 
   registrar:
     build:
@@ -60,7 +100,18 @@ services:
         condition: service_healthy
     networks:
       - account-net
-    restart: unless-stopped
+    <<: *default-security
+    pids_limit: 300
+    mem_limit: 3g
+    # browsers need writable HOME, /tmp; tmpfs for /tmp
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8709/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
 
   mail-service:
     build:
@@ -81,7 +132,17 @@ services:
         condition: service_healthy
     networks:
       - account-net
-    restart: unless-stopped
+    <<: *default-security
+    pids_limit: 200
+    mem_limit: 2g
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8701/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
 
   aa-proxy:
     build:
@@ -101,7 +162,17 @@ services:
         condition: service_healthy
     networks:
       - account-net
-    restart: unless-stopped
+    <<: *default-security
+    pids_limit: 200
+    mem_limit: 2g
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8702/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
 
   tts-proxy:
     build:
@@ -121,7 +192,17 @@ services:
         condition: service_healthy
     networks:
       - account-net
-    restart: unless-stopped
+    <<: *default-security
+    pids_limit: 100
+    mem_limit: 512m
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8700/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
 
 volumes:
   postgres_data:
