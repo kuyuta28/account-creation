@@ -29,7 +29,13 @@ x-limits-browser: &limits-browser
   mem_limit: 3g
 
 x-app-env: &app-env
-  DATABASE_URL: postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator
+  # Dev stack: keep services on the local SQLite mirror under /app/data so
+  # the existing router code paths work unchanged. Postgres is still up and
+  # reachable (for migrations + ad-hoc psql) but the app services do not
+  # connect to it. The prod overlay (docker-compose.prod.yml) sets
+  # DATABASE_URL explicitly; when that happens the `_db_path()` helper in
+  # the gmail router raises a RuntimeError so the mismatch is loud, not
+  # silent.
   INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
   SENTRY_DSN: ${SENTRY_DSN:-}
   APP_ENV: ${APP_ENV:-dev}

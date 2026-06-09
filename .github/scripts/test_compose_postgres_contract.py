@@ -13,12 +13,23 @@ def _service_block(source: str, service: str) -> str:
 
 
 def test_runtime_services_receive_postgres_database_url():
-    """Each Postgres-backed service must inherit DATABASE_URL via the x-app-env
-    anchor. We verify the anchor itself carries the dev DSN."""
+    """Dev compose must NOT set DATABASE_URL on app services (they stay on
+    SQLite). The prod overlay sets DATABASE_URL from the host env. We assert
+    the absence in dev so a future refactor that accidentally re-adds it
+    gets caught here."""
     source = COMPOSE.read_text(encoding="utf-8")
-    assert "DATABASE_URL: postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator" in source
-    # Anchor must reach every Postgres-backed service via <<: *app-env.
-    for service in ("registrar", "mail-service", "aa-proxy", "tts-proxy"):
+    # `DATABASE_URL` may appear in the postgres block (its bootstrap env) or
+    # in the migrations overlay (Flyway). It must NOT appear in any app
+    # service env block in the base dev compose.
+    app_services = ("registrar", "mail-service", "aa-proxy", "tts-proxy")
+    for service in app_services:
+        block = _service_block(source, service)
+        assert "DATABASE_URL" not in block, (
+            f"{service} sets DATABASE_URL in dev compose. The dev stack "
+            f"stays on the local SQLite mirror; only the prod/staging "
+            f"overlay should set DATABASE_URL."
+        )
+    for service in app_services:
         block = _service_block(source, service)
         assert "<<: *app-env" in block, f"{service} does not inherit x-app-env"
 
