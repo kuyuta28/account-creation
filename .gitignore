@@ -10,9 +10,11 @@ content-vault/
 
 # Local runtime data and backups
 data/
+backups/
 *.db
 *.db.bak
 *.db.*.bak
+*.dump
 
 # Local tooling / editor state
 .agents/
