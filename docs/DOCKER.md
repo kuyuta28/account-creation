@@ -181,6 +181,7 @@ prod.
 | `ccs-postgres` not healthy | `docker logs ccs-postgres --tail 200` — usually wrong creds or volume perm on Linux host |
 | `mail-service` restart loop on asyncpg | DB URL mismatch; `docker exec mail-service env \| grep DATABASE_URL` |
 | Browser automation fails (registrar) | Playwright cache corrupted; `docker compose exec registrar rm -rf /root/.cache/ms-playwright` then recreate |
+| Registrar stuck at `health: starting` | Healthcheck path is `/api/v1/health`, not `/api/health`. The internal router is mounted under `/api/v1` |
 | Traefik 404 on `/api/*` | router file not reloaded; `docker exec traefik traefik healthcheck` |
 | `python:3.12-slim` pulled but `apt-get update` 404 | stale build cache; rebuild with `NO_CACHE=1 pwsh scripts/docker-build.ps1 <service>` |
 | Container exits immediately | check `docker compose logs <service> --tail 200` for traceback; `read_only` would also surface as permission errors in `/app/data` or `/app/logs` |
@@ -189,4 +190,5 @@ prod.
 
 | Date | Change | Author |
 |---|---|---|
+| 2026-06-09 | Fix registrar healthcheck path: `/api/health` → `/api/v1/health`. Verified full stack up with all services healthy (5/6 — traefik has no healthcheck, expected) | Claude (auto) |
 | 2026-06-03 | Multi-stage Dockerfiles + non-root user + pinned deps for 4 services; compose hardening (no-new-privileges, drop caps, tmpfs, pids/mem limits, log driver); 5 PowerShell scripts; expanded `.dockerignore` | Claude (auto) |
