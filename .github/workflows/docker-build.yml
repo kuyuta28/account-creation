@@ -1,0 +1,145 @@
+name: Docker Build & Lint
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - docker-compose.yml
+      - docker-compose.prod.yml
+      - docker-compose.staging.yml
+      - .dockerignore
+      - .github/workflows/docker-build.yml
+      - scripts/docker-*.ps1
+      - scripts/wait-healthy.sh
+      - Makefile
+  pull_request:
+    paths:
+      - docker-compose.yml
+      - docker-compose.prod.yml
+      - docker-compose.staging.yml
+      - .dockerignore
+      - .github/workflows/docker-build.yml
+      - scripts/docker-*.ps1
+      - scripts/wait-healthy.sh
+      - Makefile
+
+jobs:
+  validate-compose:
+    name: Validate compose file
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set dummy env for prod overlay
+        run: |
+          echo "DB_USER=u" >> $GITHUB_ENV
+          echo "DB_PASSWORD=p" >> $GITHUB_ENV
+          echo "DB_NAME=d" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql+asyncpg://u:p@postgres:5432/d" >> $GITHUB_ENV
+          echo "INTERNAL_API_KEY=k" >> $GITHUB_ENV
+          echo "REGISTRAR_IMAGE=test@sha256:0" >> $GITHUB_ENV
+          echo "MAIL_SERVICE_IMAGE=test@sha256:0" >> $GITHUB_ENV
+          echo "AA_PROXY_IMAGE=test@sha256:0" >> $GITHUB_ENV
+          echo "TTS_PROXY_IMAGE=test@sha256:0" >> $GITHUB_ENV
+      - name: Validate base compose
+        run: docker compose -f docker-compose.yml config > /dev/null
+      - name: Validate prod overlay
+        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml config > /dev/null
+      - name: Validate staging overlay
+        run: docker compose -f docker-compose.yml -f docker-compose.staging.yml config > /dev/null
+      - name: Validate observability overlay
+        run: |
+          if [ -f docker-compose.observability.yml ]; then
+            docker compose -f docker-compose.yml -f docker-compose.observability.yml config > /dev/null
+          fi
+
+  security-policy:
+    name: Security policy check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: All services must use non-root user
+        run: |
+          for f in docker-compose.yml docker-compose.prod.yml docker-compose.staging.yml; do
+            test -f "$f" || continue
+            ! grep -qE "^\s*user:\s*\"?root" "$f" || (echo "FAIL: $f uses root user" && exit 1)
+          done
+          echo "OK: no root user in compose"
+      - name: All services must declare no-new-privileges
+        run: |
+          for f in docker-compose.yml docker-compose.prod.yml docker-compose.staging.yml; do
+            test -f "$f" || continue
+            grep -q "no-new-privileges" "$f" || (echo "FAIL: $f missing no-new-privileges" && exit 1)
+          done
+          echo "OK: no-new-privileges declared"
+      - name: .dockerignore must exist and be non-empty
+        run: |
+          test -s .dockerignore || (echo "FAIL: .dockerignore missing/empty" && exit 1)
+          echo "OK: .dockerignore present"
+      - name: Secrets must not be in compose
+        run: |
+          if grep -E "(POSTGRES_PASSWORD|INTERNAL_API_KEY)=\"?[A-Za-z0-9]{8,}\"?" docker-compose.yml; then
+            echo "FAIL: hardcoded secret in docker-compose.yml"; exit 1
+          fi
+          echo "OK: no hardcoded secrets in base compose"
+
+  build:
+    name: Build images (matrix)
+    runs-on: ubuntu-latest
+    needs: [validate-compose, security-policy]
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - { name: registrar,    dockerfile: registrar/Dockerfile,    context: . }
+          - { name: mail-service, dockerfile: mail-service/Dockerfile, context: . }
+          - { name: aa-proxy,     dockerfile: aa-proxy/Dockerfile,     context: . }
+          - { name: tts-proxy,    dockerfile: tts-proxy/Dockerfile,    context: . }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.dockerfile }}
+          push: false
+          load: true
+          tags: account-creation/${{ matrix.service.name }}:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            SERVICE_NAME=${{ matrix.service.name }}
+            SERVICE_VERSION=ci-${{ github.sha }}
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+            VCS_REF=${{ github.sha }}
+      - name: Inspect OCI labels
+        run: |
+          docker inspect account-creation/${{ matrix.service.name }}:ci \
+            --format '{{index .Config.Labels "org.opencontainers.image.title"}}'
+      - name: Verify non-root user
+        run: |
+          uid=$(docker run --rm account-creation/${{ matrix.service.name }}:ci id -u)
+          test "$uid" = "1001" || (echo "FAIL: expected uid 1001, got $uid" && exit 1)
+      - name: Image size gate (warn > 2GB)
+        run: |
+          size=$(docker image inspect account-creation/${{ matrix.service.name }}:ci --format '{{.Size}}')
+          size_mb=$((size / 1024 / 1024))
+          echo "image size: ${size_mb}MB"
+          test "$size_mb" -lt 2048 || echo "::warning::image exceeds 2GB: ${size_mb}MB"
+
+  smoke:
+    name: Smoke (up + healthcheck gate)
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start stack
+        run: pwsh scripts/docker-up.ps1
+      - name: Verify all services healthy
+        run: bash scripts/wait-healthy.sh 180
+      - name: Tear down
+        if: always()
+        run: pwsh scripts/docker-down.ps1
