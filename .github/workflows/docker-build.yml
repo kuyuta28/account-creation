@@ -130,6 +130,54 @@ jobs:
           echo "image size: ${size_mb}MB"
           test "$size_mb" -lt 2048 || echo "::warning::image exceeds 2GB: ${size_mb}MB"
 
+  scan:
+    name: Trivy image scan
+    runs-on: ubuntu-latest
+    needs: [build]
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - registrar
+          - mail-service
+          - aa-proxy
+          - tts-proxy
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy config scan (Dockerfile misconfigurations)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: 'config'
+          scan-ref: '${{ matrix.service }}/Dockerfile'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: account-creation/${{ matrix.service }}:ci
+          format: 'table'
+          exit-code: '0'        # don't fail the build on findings; surface as job summary instead
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+      - name: Convert Trivy output to SARIF
+        if: always()
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: account-creation/${{ matrix.service }}:ci
+          format: 'sarif'
+          output: 'trivy-${{ matrix.service }}.sarif'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-${{ matrix.service }}.sarif'
+          category: trivy-${{ matrix.service }}
+
   smoke:
     name: Smoke (up + healthcheck gate)
     runs-on: ubuntu-latest
