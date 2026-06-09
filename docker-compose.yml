@@ -29,7 +29,7 @@ x-limits-browser: &limits-browser
   mem_limit: 3g
 
 x-app-env: &app-env
-  DATABASE_URL: postgresql+asyncpg://ccs:ccs_secret@postgres:5432/account_creator
+  DATABASE_URL: postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator
   INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
   SENTRY_DSN: ${SENTRY_DSN:-}
   APP_ENV: ${APP_ENV:-dev}
@@ -44,8 +44,11 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
+      # Dev creds only. The prod overlay (`docker-compose.prod.yml`) requires
+      # DB_USER/DB_PASSWORD/DB_NAME from the host env and refuses to start
+      # without them. Do NOT mirror a dev password into a prod environment.
       POSTGRES_USER: ccs
-      POSTGRES_PASSWORD: ccs_secret
+      POSTGRES_PASSWORD: ccs_dev_only
       POSTGRES_DB: account_creator
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
       # Force SCRAM-SHA-256 (Postgres 14+ default, but be explicit so the

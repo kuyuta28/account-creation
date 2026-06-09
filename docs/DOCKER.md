@@ -33,7 +33,7 @@ Profiles:
 - **tts-proxy** `:8700` — TTS proxy. Mounts `tts-proxy/{logs,config}`.
 
 All services connect to Postgres via the shared `account-net` bridge network
-using `DATABASE_URL=postgresql+asyncpg://ccs:ccs_secret@postgres:5432/account_creator`.
+using `DATABASE_URL=postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator`.
 
 ## Dockerfile design
 
@@ -74,7 +74,7 @@ tts-proxy has no browser, image ≈ 1.1 GB.
 
 All env in compose uses the `${VAR:?VAR required}` mandatory form for prod/staging
 overlays to fail loudly on missing config. The dev compose hardcodes
-`ccs:ccs_secret` to match the local Postgres init.
+`ccs:ccs_dev_only` to match the local Postgres init. The dev password is intentionally different from any production credential so a leaked compose file never matches a real password.
 
 Required env for prod/staging:
 

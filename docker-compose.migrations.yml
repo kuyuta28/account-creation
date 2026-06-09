@@ -4,7 +4,7 @@
 # or by `pwsh scripts/docker-up.ps1` which now does this automatically before
 # bringing up the app services.
 #
-# Dev defaults: DB_USER=ccs DB_PASSWORD=ccs_secret DB_NAME=account_creator
+# Dev defaults: DB_USER=ccs DB_PASSWORD=ccs_dev_only DB_NAME=account_creator
 # Prod: pass --env-file .env.prod with DB_USER/DB_PASSWORD/DB_NAME.
 #
 # The flyway container does NOT keep running; it is a one-shot job.
@@ -25,7 +25,7 @@ services:
       # Use the same defaults as docker-compose.yml so dev works without --env-file.
       FLYWAY_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-account_creator}
       FLYWAY_USER: ${DB_USER:-ccs}
-      FLYWAY_PASSWORD: ${DB_PASSWORD:-ccs_secret}
+      FLYWAY_PASSWORD: ${DB_PASSWORD:-ccs_dev_only}
     networks:
       - account-net
       - postgres-internal
