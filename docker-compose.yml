@@ -107,7 +107,7 @@ services:
     tmpfs:
       - /tmp:size=512m,mode=1777
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8709/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8709/api/v1/health || exit 1"]
       interval: 30s
       timeout: 10s
       start_period: 30s
