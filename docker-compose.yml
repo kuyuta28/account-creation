@@ -43,6 +43,7 @@ x-healthcheck: &default-healthcheck
 
 services:
   postgres:
+    container_name: postgres
     image: postgres:16-alpine
     environment:
       # Dev creds only. The prod overlay (`docker-compose.prod.yml`) requires
@@ -89,6 +90,7 @@ services:
     mem_limit: 1g
 
   traefik:
+    container_name: traefik
     image: traefik:v3.0
     # In dev we expose the dashboard on 127.0.0.1:8080. Prod overlay closes this.
     command:
@@ -111,6 +113,7 @@ services:
     mem_limit: 256m
 
   registrar:
+    container_name: registrar
     build:
       context: .
       dockerfile: registrar/Dockerfile
@@ -142,6 +145,7 @@ services:
       start_period: 30s
 
   mail-service:
+    container_name: mail-service
     build:
       context: .
       dockerfile: mail-service/Dockerfile
@@ -169,6 +173,7 @@ services:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8701/api/health || exit 1"]
 
   aa-proxy:
+    container_name: aa-proxy
     build:
       context: .
       dockerfile: aa-proxy/Dockerfile
@@ -195,6 +200,7 @@ services:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8702/api/health || exit 1"]
 
   tts-proxy:
+    container_name: tts-proxy
     build:
       context: .
       dockerfile: tts-proxy/Dockerfile
@@ -223,9 +229,10 @@ services:
 
 
   web-ui:
+    container_name: web-ui
     build:
-      context: .
-      dockerfile: web-ui/Dockerfile
+      context: ./web-ui
+      dockerfile: Dockerfile
     depends_on:
       - registrar
       - mail-service
@@ -235,6 +242,13 @@ services:
       - account-net
     environment:
       <<: *app-env
+    # nginx:alpine's entrypoint tries to chown /var/cache/nginx/* to uid 101
+    # at boot. With cap_drop: ALL on a non-privileged container that chown
+    # fails with EPERM and nginx exits. The Dockerfile now forces nginx to
+    # run master as root (workers still drop to the `nginx` user), so the
+    # chown succeeds and we keep the rest of the security profile intact.
+    cap_add:
+      - CHOWN
     <<: [*security-base, *limits-small]
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
