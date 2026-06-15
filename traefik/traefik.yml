@@ -78,21 +78,21 @@ http:
 
   routers:
     mail:
-      rule: "PathPrefix(`/mail`)"
+      rule: "PathPrefix(`/mail/`)"
       service: mail-service
       middlewares:
         - strip-mail
         - rate-limit-public
         - retry-safe
     tts:
-      rule: "PathPrefix(`/tts`)"
+      rule: "PathPrefix(`/tts/`)"
       service: tts-proxy
       middlewares:
         - strip-tts
         - rate-limit-public
         - retry-safe
     aa:
-      rule: "PathPrefix(`/aa`)"
+      rule: "PathPrefix(`/aa/`)"
       service: aa-proxy
       middlewares:
         - strip-aa
