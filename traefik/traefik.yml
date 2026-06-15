@@ -99,7 +99,7 @@ http:
         - rate-limit-public
         - retry-safe
     web-ui:
-      rule: "PathPrefix(`/\`)"
+      rule: "PathPrefix(`/`)"
       service: web-ui
       middlewares:
         - rate-limit-public
