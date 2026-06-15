@@ -7,21 +7,21 @@ import yaml
 
 EXPECTED_ROUTES = {
     "mail": {
-        "rule": "PathPrefix(`/mail`)",
+        "rule": "PathPrefix(`/mail/`)",
         "service": "mail-service",
         "middleware": "strip-mail",
         "prefix": "/mail",
         "url": "http://mail-service:8701",
     },
     "tts": {
-        "rule": "PathPrefix(`/tts`)",
+        "rule": "PathPrefix(`/tts/`)",
         "service": "tts-proxy",
         "middleware": "strip-tts",
         "prefix": "/tts",
         "url": "http://tts-proxy:8700",
     },
     "aa": {
-        "rule": "PathPrefix(`/aa`)",
+        "rule": "PathPrefix(`/aa/`)",
         "service": "aa-proxy",
         "middleware": "strip-aa",
         "prefix": "/aa",
