@@ -3,6 +3,7 @@
 aa-proxy/
 common/
 desktop-ui/
+web-ui/
 mail-service/
 registrar/
 tts-proxy/

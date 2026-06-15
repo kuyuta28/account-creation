@@ -37,7 +37,7 @@ These repositories own their own runnable test suites:
 - `mail-service`
 - `aa-proxy`
 - `tts-proxy`
-- `desktop-ui`
+- `web-ui`
 
 The root repo must not pretend to execute service-repo CI on GitHub because those repos are not versioned inside root Git.
 
@@ -49,7 +49,7 @@ Every backend service must maintain:
 - unit tests for config and service-local logic
 - integration tests where runtime-critical persistence or contract behavior is involved
 
-Root validation treats these service artifact paths as a documented cross-repo contract; it does not require ignored service worktrees to exist in root CI. Desktop runtime config values are enforced in root API docs and executable validation remains owned by `desktop-ui`.
+Root validation treats these service artifact paths as a documented cross-repo contract; it does not require ignored service worktrees to exist in root CI. Web runtime config values are enforced in root API docs and executable validation remains owned by `web-ui`.
 
 Current service test floor artifacts:
 
@@ -71,12 +71,12 @@ Current critical contract tests already introduced during remediation:
 - `registrar/tests/unit/test_internal_client.py`
 - `registrar/tests/smoke/test_startup_contract.py`
 - `registrar/tests/smoke/test_postgres_bootstrap_contract.py`
-- `desktop-ui/src/__tests__/config.contract.test.ts`
-- `desktop-ui/src/__tests__/api.client.test.ts`
-- `desktop-ui/src/__tests__/App.test.tsx`
-- `desktop-ui/src/__tests__/ConfigPage.test.tsx`
-- `desktop-ui/src/__tests__/AccountsPage.test.tsx`
-- `desktop-ui/src/__tests__/CreatePage.test.tsx`
+- `web-ui/src/__tests__/config.contract.test.ts`
+- `web-ui/src/__tests__/api.client.test.ts`
+- `web-ui/src/__tests__/App.test.tsx`
+- `web-ui/src/__tests__/ConfigPage.test.tsx`
+- `web-ui/src/__tests__/AccountsPage.test.tsx`
+- `web-ui/src/__tests__/CreatePage.test.tsx`
 
 ## Local Verification Commands
 
@@ -98,7 +98,7 @@ The root repo deliberately ignores service worktrees in `pytest.ini`; a plain ro
 | `mail-service` | `PYTHONPATH=src;../common/src pytest tests -q` | `mail-service/.github/workflows/ci.yml` run URL | image tag or digest | mail-service repo |
 | `aa-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` | `aa-proxy/.github/workflows/ci.yml` run URL | image tag or digest | aa-proxy repo |
 | `tts-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` | `tts-proxy/.github/workflows/ci.yml` run URL | image tag or digest | tts-proxy repo |
-| `desktop-ui` | `npm test -- --run` | `desktop-ui/.github/workflows/ci.yml` run URL | image tag or digest | desktop-ui repo |
+| `web-ui` | `npm test -- --run` | `web-ui/.github/workflows/ci.yml` run URL | image tag or digest | web-ui repo |
 
 Run service commands from the owning repo or worktree. On PowerShell, set `$env:PYTHONPATH` before `pytest` if inline environment assignment is not available.
 
@@ -142,4 +142,4 @@ Both are required because the platform is multi-repo by design. Record the comma
 | `mail-service` | `PYTHONPATH=src;../common/src pytest tests -q` | pass |
 | `aa-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` | pass |
 | `tts-proxy` | `PYTHONPATH=src;../common/src pytest tests -q` | pass |
-| `desktop-ui` | `npm test -- --run` | pass |
+| `web-ui` | `npm test -- --run` | pass |

@@ -1,0 +1,42 @@
+name: Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options:
+          - staging
+          - prod
+
+jobs:
+  db-migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install migration tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sops age
+      - name: Decrypt environment secrets
+        run: |
+          test -n "$SOPS_AGE_KEY"
+          printf '%s' "$SOPS_AGE_KEY" > age.key
+          SOPS_AGE_KEY_FILE=age.key sops --decrypt config/${{ inputs.environment }}/secrets.yaml > .env
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+      - name: Validate migration compose
+        run: docker compose --env-file .env -f docker-compose.yml -f docker-compose.migrations.yml config
+      - name: Run Flyway migration
+        run: docker compose --env-file .env -f docker-compose.yml -f docker-compose.migrations.yml run --rm flyway
+      - name: Record migration evidence
+        run: |
+          echo "environment=${{ inputs.environment }}" >> migration-evidence.txt
+          echo "commit=${{ github.sha }}" >> migration-evidence.txt
+          echo "workflow=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> migration-evidence.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: migration-evidence
+          path: migration-evidence.txt

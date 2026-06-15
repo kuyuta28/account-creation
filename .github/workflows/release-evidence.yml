@@ -1,0 +1,20 @@
+name: Release Evidence
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  release-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validator dependencies
+        run: python -m pip install --upgrade pip pyyaml pytest
+      - name: Validate release evidence contract
+        run: python .github/scripts/validate_runtime_truth.py
+      - name: Test validators
+        run: PYTHONPATH=.github/scripts pytest .github/scripts/test_validate_runtime_truth.py .github/scripts/test_validate_traefik_routes.py -q

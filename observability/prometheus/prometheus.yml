@@ -1,0 +1,42 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts/*.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - prometheus:9090
+
+  - job_name: traefik
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - traefik:8080
+
+  - job_name: registrar-health
+    metrics_path: /api/v1/health
+    static_configs:
+      - targets:
+          - registrar:8709
+
+  - job_name: mail-service-health
+    metrics_path: /api/health
+    static_configs:
+      - targets:
+          - mail-service:8701
+
+  - job_name: aa-proxy-health
+    metrics_path: /api/health
+    static_configs:
+      - targets:
+          - aa-proxy:8702
+
+  - job_name: tts-proxy-health
+    metrics_path: /api/health
+    static_configs:
+      - targets:
+          - tts-proxy:8700

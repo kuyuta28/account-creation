@@ -79,12 +79,13 @@ EXPECTED_SERVICE_TEST_COMMANDS = {
     "mail-service": "PYTHONPATH=src;../common/src pytest tests -q",
     "aa-proxy": "PYTHONPATH=src;../common/src pytest tests -q",
     "tts-proxy": "PYTHONPATH=src;../common/src pytest tests -q",
-    "desktop-ui": "npm test -- --run",
+    "web-ui": "npm test -- --run",
 }
 
-EXPECTED_DESKTOP_CONFIG = {
-    "API_BASE_URL": "http://localhost:8709/api/v1",
-    "TTS_BASE_URL": "http://localhost:8700",
+# Web-ui config uses relative paths (proxied via Traefik in dev stack).
+EXPECTED_WEBUI_CONFIG = {
+    "API_BASE_URL": "/api/v1",
+    "TTS_BASE_URL": "/tts",
 }
 
 EXPECTED_CONTRACT_ARTIFACTS = (
@@ -95,12 +96,12 @@ EXPECTED_CONTRACT_ARTIFACTS = (
     ROOT / "registrar" / "tests" / "unit" / "test_internal_client.py",
     ROOT / "registrar" / "tests" / "smoke" / "test_startup_contract.py",
     ROOT / "registrar" / "tests" / "smoke" / "test_postgres_bootstrap_contract.py",
-    ROOT / "desktop-ui" / "src" / "__tests__" / "config.contract.test.ts",
-    ROOT / "desktop-ui" / "src" / "__tests__" / "api.client.test.ts",
-    ROOT / "desktop-ui" / "src" / "__tests__" / "App.test.tsx",
-    ROOT / "desktop-ui" / "src" / "__tests__" / "ConfigPage.test.tsx",
-    ROOT / "desktop-ui" / "src" / "__tests__" / "AccountsPage.test.tsx",
-    ROOT / "desktop-ui" / "src" / "__tests__" / "CreatePage.test.tsx",
+    ROOT / "web-ui" / "src" / "__tests__" / "config.contract.test.ts",
+    ROOT / "web-ui" / "src" / "__tests__" / "api.client.test.ts",
+    ROOT / "web-ui" / "src" / "__tests__" / "App.test.tsx",
+    ROOT / "web-ui" / "src" / "__tests__" / "ConfigPage.test.tsx",
+    ROOT / "web-ui" / "src" / "__tests__" / "AccountsPage.test.tsx",
+    ROOT / "web-ui" / "src" / "__tests__" / "CreatePage.test.tsx",
 )
 
 EXPECTED_SERVICE_CI_ARTIFACTS = (
@@ -109,7 +110,7 @@ EXPECTED_SERVICE_CI_ARTIFACTS = (
     ROOT / "mail-service" / ".github" / "workflows" / "ci.yml",
     ROOT / "aa-proxy" / ".github" / "workflows" / "ci.yml",
     ROOT / "tts-proxy" / ".github" / "workflows" / "ci.yml",
-    ROOT / "desktop-ui" / ".github" / "workflows" / "ci.yml",
+    ROOT / "web-ui" / ".github" / "workflows" / "ci.yml",
 )
 
 EXPECTED_SERVICE_TEST_FLOOR_ARTIFACTS = (
@@ -337,7 +338,7 @@ def main() -> int:
     _require_regex(
         errors,
         api_text,
-        r"(?m)^- `desktop-ui` and backend services are validated in their own repositories\.$",
+        r"(?m)^- `web-ui` and backend services are validated in their own repositories\.$",
         "docs/API-ARCHITECTURE.md",
     )
     _require_contains(errors, enterprise_standards_text, "PostgreSQL là runtime truth", "docs/ENTERPRISE-STANDARDS.md")
@@ -364,13 +365,13 @@ def main() -> int:
     _require_contains(
         errors,
         testing_text,
-        "Root validation treats these service artifact paths as a documented cross-repo contract; it does not require ignored service worktrees to exist in root CI. Desktop runtime config values are enforced in root API docs and executable validation remains owned by `desktop-ui`.",
+        "Root validation treats these service artifact paths as a documented cross-repo contract; it does not require ignored service worktrees to exist in root CI. Web runtime config values are enforced in root API docs and executable validation remains owned by `web-ui`.",
         "docs/TESTING.md",
     )
     for service_name, command in EXPECTED_SERVICE_TEST_COMMANDS.items():
         _require_contains(errors, testing_text, f"| `{service_name}` |", "docs/TESTING.md")
         _require_contains(errors, testing_text, f"`{command}`", "docs/TESTING.md")
-        if service_name != "desktop-ui":
+        if service_name != "web-ui":
             _require_contains(errors, pytest_ini_text, f"--ignore={service_name}", "pytest.ini")
             _require_contains(errors, pytest_ini_text, service_name, "pytest.ini")
 
@@ -420,7 +421,7 @@ def main() -> int:
     _require_documented_artifact(errors, arch_text, TRAEFIK_ROUTE_VALIDATOR, "docs/ARCHITECTURE.md")
     _require_documented_artifact(errors, api_text, TRAEFIK_ROUTE_SMOKE, "docs/API-ARCHITECTURE.md")
     _require_contains(errors, exit_review_text, "| Traefik public routing contract | `docs/superpowers/contracts/traefik-public-routes.md`, `.github/scripts/validate_traefik_routes.py`, `.github/scripts/test_validate_traefik_routes.py`, and `scripts/smoke-traefik-routes.ps1` |", "docs/superpowers/audits/enterprise-exit-review-2026-05-02.md")
-    _require_contains(errors, pytest_ini_text, "--ignore=desktop-ui", "pytest.ini")
+    _require_contains(errors, pytest_ini_text, "--ignore=web-ui", "pytest.ini")
 
     for artifact in EXPECTED_CONTRACT_ARTIFACTS:
         _require_documented_artifact(errors, testing_text, artifact, "docs/TESTING.md")
@@ -431,7 +432,7 @@ def main() -> int:
     for artifact in EXPECTED_SERVICE_CI_ARTIFACTS:
         _require_documented_artifact(errors, testing_text, artifact, "docs/TESTING.md")
 
-    for name, value in EXPECTED_DESKTOP_CONFIG.items():
+    for name, value in EXPECTED_WEBUI_CONFIG.items():
         _require_contains(errors, api_text, f"export const {name} = \"{value}\";", "docs/API-ARCHITECTURE.md")
 
     _require_contains(errors, api_text, "aa-proxy` at `http://localhost:8702`", "docs/API-ARCHITECTURE.md")

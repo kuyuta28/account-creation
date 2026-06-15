@@ -1,0 +1,74 @@
+# docker-compose.dev.yml — dev overlay: bind-mount code, no rebuild.
+#
+# Dùng:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Khác biệt so với prod:
+#   - Bind-mount source code → edit → restart container (< 1s), KHÔNG build image
+#   - Bind-mount 9router DB read-only → admin UI thấy key thật từ host
+#   - web-ui dùng Vite dev server (port 1421 hot reload) thay vì nginx
+#   - restart: no ở app services → dev muốn thấy crash, không tự restart vô tận
+#
+# Mount paths cho 9router DB (Windows host, WSL2 backend):
+#   Host: C:\Users\admin\AppData\Roaming\9router\ → Container: /mnt/9router
+#   Tự động detect platform. Nếu dùng Mac/Linux host, đổi sang ~/.local/share/9router/.
+
+services:
+  registrar:
+    volumes:
+      # Override prod volume → bind-mount code cho hot reload
+      - ./registrar/src:/app/src
+      - ./registrar/main.py:/app/main.py
+      - ./registrar/run_api.py:/app/run_api.py
+      - ./common/src:/app/common/src
+      - ./registrar/config:/app/config:ro
+    restart: "no"
+
+  mail-service:
+    volumes:
+      - ./mail-service/src:/app/src
+      - ./mail-service/main.py:/app/main.py
+      - ./common/src:/app/common/src
+      - ./mail-service/config:/app/config:ro
+    restart: "no"
+
+  aa-proxy:
+    volumes:
+      - ./aa-proxy/src:/app/src
+      - ./aa-proxy/main.py:/app/main.py
+      - ./common/src:/app/common/src
+      - ./aa-proxy/config:/app/config:ro
+    restart: "no"
+
+  tts-proxy:
+    volumes:
+      - ./tts-proxy/src:/app/src
+      - ./tts-proxy/main.py:/app/main.py
+      - ./common/src:/app/common/src
+      - ./tts-proxy/config:/app/config:ro
+      # 9router DB (host Windows: C:\Users\admin\AppData\Roaming\9router)
+      # WSL2 tự động expose %APPDATA% dưới /mnt/c/Users/admin/AppData/Roaming/
+      - ${NINE_ROUTER_HOST_DIR:-/c/Users/admin/AppData/Roaming/9router}:/mnt/9router:ro
+    environment:
+      NINE_ROUTER_DB: /mnt/9router/db/data.sqlite
+    restart: "no"
+
+  web-ui:
+    # Skip image build entirely; chạy Vite dev server trực tiếp từ host
+    build: !reset null
+    image: node:20-alpine
+    working_dir: /app
+    command: ["sh", "-c", "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0 --port 80"]
+    volumes:
+      - ./web-ui:/app
+      - /app/node_modules   # tránh conflict bind-mount với container's node_modules
+    ports:
+      - "1421:80"
+    environment:
+      VITE_API_BASE_URL: /api/v1
+      VITE_TTS_BASE_URL: /tts
+    restart: "no"
+    depends_on:
+      - registrar
+      - mail-service
+      - aa-proxy
+      - tts-proxy

@@ -1,0 +1,5 @@
+creation_rules:
+  - path_regex: config/staging/secrets\.yaml$
+    age: age1wyhed2l5j3p5n6gvczpud7upztgu999jdrnhvs9nscdp8m7m9glse4ju0z
+  - path_regex: config/prod/secrets\.yaml$
+    age: age1wyhed2l5j3p5n6gvczpud7upztgu999jdrnhvs9nscdp8m7m9glse4ju0z

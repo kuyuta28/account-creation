@@ -102,7 +102,7 @@ services:
       # Keep 80:80 for the runtime-smoke script and any host tooling
       # that already pointed at the old default. Add 1421:80 so the
       # web UI is reachable on the same port the Vite dev server used
-      # to bind during the desktop-ui era — same URL, same muscle
+      # to bind during the web-ui era — same URL, same muscle
       # memory, no operator surprise.
       - "80:80"
       - "1421:80"

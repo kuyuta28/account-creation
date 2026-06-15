@@ -12,7 +12,7 @@ This file records the evidence required before staging or production promotion i
 | `mail-service` | `mail-service` | local worktree | required before deploy | `PYTHONPATH=mail-service/src;common/src pytest mail-service/tests -q` | local | 2026-05-12 23:24 +07:00 | `38 passed` |
 | `aa-proxy` | `aa-proxy` | local worktree | required before deploy | `PYTHONPATH=aa-proxy/src;common/src pytest aa-proxy/tests -q` | local | 2026-05-12 23:24 +07:00 | `31 passed` |
 | `tts-proxy` | `tts-proxy` | local worktree | required before deploy | `PYTHONPATH=tts-proxy/src;common/src pytest tts-proxy/tests -q` | local | 2026-05-12 23:24 +07:00 | `53 passed` |
-| `desktop-ui` | `desktop-ui` | local worktree | required before deploy | `npm --prefix desktop-ui test -- --run` | local | 2026-05-12 23:23 +07:00 | `89 passed` |
+| `web-ui` (formerly desktop-ui) | `web-ui` | local worktree | required before deploy | `npm --prefix web-ui test -- --run` | local | 2026-05-12 23:23 +07:00 | `89 passed` |
 
 ## Platform Gates
 

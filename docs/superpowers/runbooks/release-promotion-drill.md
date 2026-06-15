@@ -59,7 +59,7 @@ Suggested order:
 3. `mail-service`
 4. `aa-proxy`
 5. `tts-proxy`
-6. `desktop-ui`
+6. `web-ui`
 7. root orchestration repo
 
 ## Release Evidence Template
@@ -74,7 +74,7 @@ Record this table before any staging or production promotion. Use the exact comm
 | `mail-service` | `mail-service` |  |  | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
 | `aa-proxy` | `aa-proxy` |  |  | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
 | `tts-proxy` | `tts-proxy` |  |  | `PYTHONPATH=src;../common/src pytest tests -q` |  |  |  |
-| `desktop-ui` | `desktop-ui` |  |  | `npm test -- --run` |  |  |  |
+| `web-ui` | `web-ui` |  |  | `npm test -- --run` |  |  |  |
 
 ## Rollback Triggers
 

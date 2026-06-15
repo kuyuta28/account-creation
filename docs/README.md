@@ -27,4 +27,4 @@ These links point into sibling service worktrees. The root repo indexes them for
 | [Docker Compose](../docker-compose.yml) | Service orchestration |
 | [Docker Runbook](DOCKER.md) | Build/up/down, healthchecks, backup, rollback, secrets, troubleshooting |
 | [Backup Policy](BACKUP-POLICY.md) | Postgres backup/restore cadence, retention, scheduling, verification |
-| [Frontend](../desktop-ui/README.md) | Desktop UI (Tauri/React) |
+| [Frontend](../web-ui/README.md) | Web UI (React/Vite, served via Traefik) |

@@ -7,7 +7,7 @@ It must be kept in sync with:
 
 - `docker-compose.yml`
 - service `server.py` files
-- `desktop-ui/src/config.ts`
+- `web-ui/src/config.ts`
 
 ## 1. Current Service Route Prefixes
 
@@ -85,13 +85,13 @@ Successful first-party API responses use the standard envelope shape from `docs/
 
 Router-level auth and not-found failures may return framework-native error bodies; clients must treat HTTP status as authoritative.
 
-## 5. Desktop UI Runtime Contract
+## 5. Web UI Runtime Contract
 
-Current desktop runtime config resolves to:
+Current web runtime config resolves to (relative paths — Traefik routes the prefixes):
 
 ```typescript
-export const API_BASE_URL = "http://localhost:8709/api/v1";
-export const TTS_BASE_URL = "http://localhost:8700";
+export const API_BASE_URL = "/api/v1";
+export const TTS_BASE_URL = "/tts";
 ```
 
 The TTS client must talk to its own service origin directly.
@@ -100,7 +100,7 @@ The Artificial Analysis proxy remains `aa-proxy` at `http://localhost:8702`.
 
 ## 6. Validation Ownership
 
-- `desktop-ui` and backend services are validated in their own repositories.
+- `web-ui` and backend services are validated in their own repositories.
 - The root orchestration repo validates only the documented runtime contract and root Compose truth.
 - Cross-repo consistency is enforced through shared contract docs plus service-local tests.
 
@@ -116,6 +116,6 @@ Any API/routing change is incomplete unless all of these are updated together:
 
 1. `docker-compose.yml`
 2. affected service `server.py`
-3. `desktop-ui/src/config.ts`
+3. `web-ui/src/config.ts`
 4. `docs/ARCHITECTURE.md`
 5. this file

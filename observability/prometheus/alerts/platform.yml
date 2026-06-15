@@ -1,0 +1,29 @@
+groups:
+  - name: platform
+    rules:
+      - alert: PlatformTargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "Platform target is down"
+          description: "{{ $labels.job }} target {{ $labels.instance }} has been down for more than 2 minutes."
+
+      - alert: HighHttp5xxRate
+        expr: sum(rate(traefik_service_requests_total{code=~"5.."}[5m])) > 0
+        for: 5m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Traefik is observing HTTP 5xx responses"
+          description: "Investigate service health and upstream routing."
+
+      - alert: PostgresDown
+        expr: absent(up{job="postgres"})
+        for: 5m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Postgres metrics are absent"
+          description: "Postgres exporter is not configured or not reachable for this environment."

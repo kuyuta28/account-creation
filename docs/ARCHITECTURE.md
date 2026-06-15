@@ -25,7 +25,7 @@ Important: this workspace is not one unified Git repository in practice.
 - Several service directories are separate Git repositories with their own `.git` directories:
   - `registrar/`
   - `aa-proxy/`
-  - `desktop-ui/`
+  - `web-ui/`
   - `common/`
   - `mail-service/`
 
@@ -90,7 +90,7 @@ These are the prefixes enforced by service code today:
 
 ## Frontend Runtime Surface
 
-`desktop-ui` is a separate repository/workspace and must be validated against backend routing truth independently.
+`web-ui` is a separate repository/workspace and must be validated against backend routing truth independently.
 Its generated config now points at the root runtime ports for registrar, TTS, and AA service origins.
 
 ## Development Access
