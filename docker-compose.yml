@@ -29,12 +29,8 @@ x-limits-browser: &limits-browser
   mem_limit: 3g
 
 x-app-env: &app-env
-  # Shared env for every app service. DATABASE_URL is intentionally NOT here:
-  # the gmail router in registrar still uses the SQLite sync helpers, so it
-  # cannot run with DATABASE_URL set (the _db_path() helper raises a loud
-  # RuntimeError). mail-service / aa-proxy / tts-proxy all use the async
-  # Postgres layer and need DATABASE_URL — they set it directly in their own
-  # env block.
+  # Shared env for every app service. DATABASE_URL is set per service so each
+  # container connects explicitly to the dev PostgreSQL instance.
   INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
   SENTRY_DSN: ${SENTRY_DSN:-}
   APP_ENV: ${APP_ENV:-dev}
@@ -121,6 +117,7 @@ services:
     environment:
       REGISTRAR_HOST: 0.0.0.0
       REGISTRAR_PORT: 8709
+      DATABASE_URL: postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator
       <<: *app-env
     ports:
       - "127.0.0.1:8709:8709"
@@ -223,6 +220,28 @@ services:
       <<: *default-healthcheck
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8700/api/health || exit 1"]
       start_period: 15s
+
+
+  web-ui:
+    build:
+      context: .
+      dockerfile: web-ui/Dockerfile
+    depends_on:
+      - registrar
+      - mail-service
+      - aa-proxy
+      - tts-proxy
+    networks:
+      - account-net
+    environment:
+      <<: *app-env
+    <<: [*security-base, *limits-small]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres_data:

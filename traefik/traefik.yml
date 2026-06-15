@@ -1,4 +1,4 @@
-# Static configuration
+﻿# Static configuration
 #
 # Dashboard control:
 #   - Dev: traefik command includes `--api.insecure=true` and compose binds 127.0.0.1:8080
@@ -98,6 +98,13 @@ http:
         - strip-aa
         - rate-limit-public
         - retry-safe
+    web-ui:
+      rule: "PathPrefix(`/\`)"
+      service: web-ui
+      middlewares:
+        - rate-limit-public
+        - retry-safe
+
     api:
       rule: "PathPrefix(`/api/v1`)"
       service: registrar
@@ -118,7 +125,13 @@ http:
       loadBalancer:
         servers:
           - url: "http://aa-proxy:8702"
+    web-ui:
+      loadBalancer:
+        servers:
+          - url: "http://web-ui:80"
+
     registrar:
       loadBalancer:
         servers:
           - url: "http://registrar:8709"
+
