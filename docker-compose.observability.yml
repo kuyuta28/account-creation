@@ -69,6 +69,64 @@ services:
         max-size: "20m"
         max-file: "5"
 
+  # ── Central logging: Loki + Alloy ──────────────────────────────────────────
+  loki:
+    image: grafana/loki:3.5.1
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./observability/loki/local-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - account-net
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: false   # Loki writes index/chunks
+    restart: unless-stopped
+    mem_limit: 512m
+    pids_limit: 100
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  alloy:
+    image: grafana/alloy:v1.17.1
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - /etc/alloy/config.alloy
+    volumes:
+      # ONLY the socket — NOT /var/lib/docker/containers (unreachable on Docker Desktop/WSL2).
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    networks:
+      - account-net
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /data-alloy:size=64m,mode=1777   # Alloy writes its state store here
+    restart: unless-stopped
+    mem_limit: 256m
+    pids_limit: 100
+    depends_on:
+      - loki
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
 volumes:
   prometheus_data:
   grafana_data:
+  loki_data:

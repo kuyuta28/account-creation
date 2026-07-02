@@ -1,0 +1,49 @@
+// Alloy config — collect Docker container logs via the engine API and ship to Loki.
+//
+// Docker Desktop (WSL2) gotcha: /var/lib/docker/containers lives inside the
+// docker-desktop VM and is NOT reachable via a compose bind mount. Collect logs
+// over the Docker socket instead (discovery.docker + loki.source.docker use the
+// /containers/<id>/logs API), which works identically on Windows/WSL2 and Linux.
+//
+// request_id stays INSIDE the JSON log line (parsed at query time with | json).
+// It must NEVER become a Loki label — high cardinality would explode the index.
+// Only low-cardinality labels are emitted: service, container, project.
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  // strip leading "/" from the container name
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  // compose service name -> Loki label (low cardinality)
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  // compose project name -> Loki label
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "project"
+  }
+}
+
+loki.source.docker "default" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

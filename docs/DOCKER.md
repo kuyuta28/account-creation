@@ -39,6 +39,36 @@ Profiles:
 All services connect to Postgres via the isolated `postgres-internal` bridge.
 Dev DSN defaults to `postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator`.
 
+## Central logging
+
+The observability overlay (`docker-compose.observability.yml`) ships a
+Grafana Loki + Alloy pipeline alongside the existing Prometheus + Grafana:
+
+- **Alloy** (`grafana/alloy:v1.17.1`) collects every container's stdout over
+  the Docker socket (`/var/run/docker.sock`) — NOT a `/var/lib/docker/containers`
+  bind mount, which is unreachable on Docker Desktop/WSL2 (the daemon lives in
+  the `docker-desktop` VM). Labels emitted: `service`, `container`, `project`
+  (low cardinality only).
+- **Loki** (`grafana/loki:3.5.1`) stores logs on the `loki_data` volume,
+  filesystem backend, 14-day retention.
+
+No Python changes were needed: `common/logging/structured.py` `JSONFormatter`
+already emits JSON with `service`, `request_id`, `trace_id`, `span_id` (set per
+request via `RequestIDMiddleware` + contextvars).
+
+**`request_id` is a parsed field, never a Loki label** — labeling it would
+explode the index (one stream per request). Query it at read time:
+
+```logql
+# all logs for one request across all services
+{project="account-creation"} |= "abc-123" | json | request_id="abc-123"
+# one service, last errors
+{service="registrar"} | json | level="ERROR"
+```
+
+Query in Grafana (`http://localhost:3000` → Explore → Loki). Start only the
+logging stack: `docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d loki alloy grafana`.
+
 ## Scope & decisions (local = prod)
 
 This stack is **single-machine, single-user, private-repo**. The local Windows
