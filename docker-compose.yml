@@ -1,283 +1,287 @@
-# Root orchestration: dev local stack.
-# For prod/staging release use docker-compose.{prod,staging}.yml overlays.
-
-x-logging: &default-logging
-  driver: json-file
-  options:
-    max-size: "20m"
-    max-file: "5"
-
-x-security-base: &security-base
-  security_opt:
-    - no-new-privileges:true
-  cap_drop:
-    - ALL
-  read_only: false   # services write to /app/{data,logs,debug,screenshots}; tmpfs handles /tmp
-  restart: unless-stopped
-  logging: *default-logging
-
-x-limits-small: &limits-small
-  pids_limit: 100
-  mem_limit: 512m
-
-x-limits-medium: &limits-medium
-  pids_limit: 200
-  mem_limit: 2g
-
-x-limits-browser: &limits-browser
-  pids_limit: 300
-  mem_limit: 3g
-
-x-app-env: &app-env
-  # Shared env for every app service. DATABASE_URL is set per service so each
-  # container connects explicitly to the dev PostgreSQL instance.
-  INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
-  SENTRY_DSN: ${SENTRY_DSN:-}
-  APP_ENV: ${APP_ENV:-dev}
-
-x-healthcheck: &default-healthcheck
-  interval: 30s
-  timeout: 10s
-  retries: 3
-  start_period: 20s
+networks:
+  account-net:
+    name: account-net
+    driver: bridge
+  postgres-internal:
+    name: postgres-internal
+    driver: bridge
+    internal: true
 
 services:
   postgres:
-    container_name: postgres
     image: postgres:16-alpine
-    environment:
-      # Dev creds only. The prod overlay (`docker-compose.prod.yml`) requires
-      # DB_USER/DB_PASSWORD/DB_NAME from the host env and refuses to start
-      # without them. Do NOT mirror a dev password into a prod environment.
-      POSTGRES_USER: ccs
-      POSTGRES_PASSWORD: ccs_dev_only
-      POSTGRES_DB: account_creator
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-      # Force SCRAM-SHA-256 (Postgres 14+ default, but be explicit so the
-      # cluster rejects MD5/legacy clients). Affects only newly-initialized
-      # databases; existing data is untouched.
-      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
-    # Host-side psql/migration tools reach Postgres on 127.0.0.1:5432 in dev.
-    # Prod/staging overlay resets this to [] (no host port).
-    ports:
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - account-net
-      - postgres-internal
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ccs -d account_creator"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    <<: [*security-base]
-    # Postgres needs writeable /var/lib/postgresql/data; cannot use read_only:true.
-    # Bring back only the caps it needs (initdb, wal replay, replication).
+    container_name: postgres
+    cap_drop: [ALL]
     cap_add:
       - CHOWN
       - DAC_OVERRIDE
       - FOWNER
       - SETUID
       - SETGID
-      - SYS_RESOURCE   # shared_buffers tuning
+      - SYS_RESOURCE
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    restart: unless-stopped
+    mem_limit: 1g
+    pids_limit: 200
     shm_size: 256m
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
-    pids_limit: 200
-    mem_limit: 1g
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-account_creator}
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ccs_dev_only}
+      POSTGRES_USER: ${POSTGRES_USER:-ccs}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ccs} -d ${POSTGRES_DB:-account_creator}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: &x-logging
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+    networks:
+      - postgres-internal
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   traefik:
-    container_name: traefik
     image: traefik:v3.0
-    # In dev we expose the dashboard on 127.0.0.1:8080. Prod overlay closes this.
-    command:
-      - "--api.insecure=true"
-      - "--providers.file.filename=/etc/traefik/traefik.yml"
-      - "--providers.file.watch=true"
-      - "--entrypoints.web.address=:80"
+    container_name: traefik
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    restart: unless-stopped
+    mem_limit: 256m
+    pids_limit: 200
+    logging: *x-logging
+    networks:
+      - account-net
     ports:
-      # Keep 80:80 for the runtime-smoke script and any host tooling
-      # that already pointed at the old default. Add 1421:80 so the
-      # web UI is reachable on the same port the Vite dev server used
-      # to bind during the web-ui era — same URL, same muscle
-      # memory, no operator surprise.
       - "80:80"
-      - "1421:80"
       - "127.0.0.1:8080:8080"
     volumes:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-    networks:
-      - account-net
     depends_on:
       postgres:
         condition: service_healthy
-    <<: [*security-base]
+
+  aa-proxy:
+    build:
+      context: .
+      dockerfile: aa-proxy/Dockerfile
+    container_name: aa-proxy
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    restart: unless-stopped
+    mem_limit: 2g
     pids_limit: 200
-    mem_limit: 256m
+    logging: *x-logging
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    networks:
+      - account-net
+      - postgres-internal
+    ports:
+      - "127.0.0.1:8702:8702"
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      AA_PORT: 8702
+      DATABASE_URL: ${DATABASE_URL}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8702/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./aa-proxy/logs:/app/logs
+      - ./aa-proxy/config:/app/config:ro
+      - ./aa-proxy/data:/app/data
+      - ${LOCALAPPDATA_POSIX:-/c/Users/admin/AppData/Local}/camoufox:/app/.cache/camoufox:rw
+
+  mail-service:
+    build:
+      context: .
+      dockerfile: mail-service/Dockerfile
+    container_name: mail-service
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    restart: unless-stopped
+    mem_limit: 2g
+    pids_limit: 200
+    logging: *x-logging
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    networks:
+      - account-net
+      - postgres-internal
+    ports:
+      - "127.0.0.1:8701:8701"
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      MAIL_PORT: 8701
+      DATABASE_URL: ${DATABASE_URL}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8701/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - mail-service-data:/app/data
+      - ./mail-service/logs:/app/logs
+      - ./mail-service/config:/app/config:ro
+      - ${LOCALAPPDATA_POSIX:-/c/Users/admin/AppData/Local}/camoufox:/app/.cache/camoufox:rw
 
   registrar:
-    container_name: registrar
     build:
       context: .
       dockerfile: registrar/Dockerfile
-    environment:
-      REGISTRAR_HOST: 0.0.0.0
-      REGISTRAR_PORT: 8709
-      DATABASE_URL: postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator
-      <<: *app-env
+    container_name: registrar
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    restart: unless-stopped
+    mem_limit: 3g
+    pids_limit: 300
+    logging: *x-logging
+    tmpfs:
+      - /tmp:size=2g,mode=1777
+    networks:
+      - account-net
+      - postgres-internal
     ports:
       - "127.0.0.1:8709:8709"
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      REGISTRAR_HOST: 0.0.0.0
+      REGISTRAR_PORT: 8709
+      DATABASE_URL: ${DATABASE_URL}
+      # ponytail: headless is enforced via config in container. Use dev overlay for GUI debug on Windows.
+      CAMOUFOX_HEADLESS: "1"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8709/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - registrar-data:/app/data
       - ./registrar/logs:/app/logs
       - ./registrar/debug:/app/debug
       - ./registrar/screenshots:/app/screenshots
-      - ./registrar/config:/app/config
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - account-net
-      - postgres-internal
-    <<: [*security-base, *limits-browser]
-    tmpfs:
-      - /tmp:size=512m,mode=1777
-    healthcheck:
-      <<: *default-healthcheck
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8709/api/v1/health || exit 1"]
-      start_period: 30s
-
-  mail-service:
-    container_name: mail-service
-    build:
-      context: .
-      dockerfile: mail-service/Dockerfile
-    environment:
-      MAIL_PORT: 8701
-      DATABASE_URL: postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator
-      <<: *app-env
-    ports:
-      - "127.0.0.1:8701:8701"
-    volumes:
-      - mail-service-data:/app/data
-      - ./mail-service/logs:/app/logs
-      - ./mail-service/config:/app/config
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - account-net
-      - postgres-internal
-    <<: [*security-base, *limits-medium]
-    tmpfs:
-      - /tmp:size=256m,mode=1777
-    healthcheck:
-      <<: *default-healthcheck
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8701/api/health || exit 1"]
-
-  aa-proxy:
-    container_name: aa-proxy
-    build:
-      context: .
-      dockerfile: aa-proxy/Dockerfile
-    environment:
-      AA_PORT: 8702
-      DATABASE_URL: postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator
-      <<: *app-env
-    ports:
-      - "127.0.0.1:8702:8702"
-    volumes:
-      - ./aa-proxy/logs:/app/logs
-      - ./aa-proxy/config:/app/config
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - account-net
-      - postgres-internal
-    <<: [*security-base, *limits-medium]
-    tmpfs:
-      - /tmp:size=256m,mode=1777
-    healthcheck:
-      <<: *default-healthcheck
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8702/api/health || exit 1"]
+      - ./registrar/config:/app/config:ro
+      - ${LOCALAPPDATA_POSIX:-/c/Users/admin/AppData/Local}/camoufox:/app/.cache/camoufox:rw
 
   tts-proxy:
-    container_name: tts-proxy
     build:
       context: .
       dockerfile: tts-proxy/Dockerfile
-    environment:
-      TTS_PORT: 8700
-      DATABASE_URL: postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator
-      <<: *app-env
-    ports:
-      - "127.0.0.1:8700:8700"
-    volumes:
-      - ./tts-proxy/logs:/app/logs
-      - ./tts-proxy/config:/app/config
-    depends_on:
-      postgres:
-        condition: service_healthy
+    container_name: tts-proxy
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    restart: unless-stopped
+    mem_limit: 512m
+    pids_limit: 100
+    logging: *x-logging
+    tmpfs:
+      - /tmp:size=128m,mode=1777
     networks:
       - account-net
       - postgres-internal
-    <<: [*security-base, *limits-small]
-    tmpfs:
-      - /tmp:size=128m,mode=1777
+    ports:
+      - "127.0.0.1:8700:8700"
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      TTS_PORT: 8700
+      DATABASE_URL: ${DATABASE_URL}
+      NINE_ROUTER_DB: /home/app/.local/share/9router/db/data.sqlite
     healthcheck:
-      <<: *default-healthcheck
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8700/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
       start_period: 15s
-
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./tts-proxy/logs:/app/logs
+      - ./tts-proxy/config:/app/config:ro
+      - ${APPDATA_POSIX:-/c/Users/admin/AppData/Roaming}/9router/db:/home/app/.local/share/9router/db:ro
 
   web-ui:
-    container_name: web-ui
     build:
       context: ./web-ui
       dockerfile: Dockerfile
-    depends_on:
-      - registrar
-      - mail-service
-      - aa-proxy
-      - tts-proxy
+    container_name: web-ui
+    cap_drop: [ALL]
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    restart: unless-stopped
+    mem_limit: 512m
+    pids_limit: 100
+    logging: *x-logging
     networks:
       - account-net
-    environment:
-      <<: *app-env
-    # nginx:alpine's entrypoint tries to chown /var/cache/nginx/* to uid 101
-    # at boot. With cap_drop: ALL on a non-privileged container that chown
-    # fails with EPERM and nginx exits. The Dockerfile now forces nginx to
-    # run master as root (workers still drop to the `nginx` user), so the
-    # chown succeeds and we keep the rest of the security profile intact.
-    cap_add:
-      - CHOWN
-    <<: [*security-base, *limits-small]
+    depends_on:
+      registrar:
+        condition: service_healthy
+      mail-service:
+        condition: service_healthy
+      aa-proxy:
+        condition: service_healthy
+      tts-proxy:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
       start_period: 10s
+      retries: 3
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
+      SENTRY_DSN: ${SENTRY_DSN:-}
 
 volumes:
-  postgres_data:
-  # Hot-path bind mounts were replaced with named volumes to avoid
-  # Windows host filesystem slowness (see docs/DOCKER.md "Performance").
-  # The directory on disk is created lazily on first write.
-  registrar-data:
   mail-service-data:
-
-networks:
-  account-net:
-    name: account-net
-    driver: bridge
-  # Postgres lives on this network too but app services only need it to
-  # resolve `postgres` and connect on 5432. No other container joins this.
-  postgres-internal:
-    name: postgres-internal
-    driver: bridge
-    internal: false   # allow app services to reach; block external ingress from outside compose
+  postgres_data:
+  registrar-data:
