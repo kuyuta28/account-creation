@@ -123,7 +123,7 @@ If a change touches routes, ports, or datastore ownership, the root validator mu
 - PostgreSQL is the canonical runtime database for production and staging.
 - SQLite is allowed only for isolated tests, transitional tooling, or legacy conversion flows.
 - Migration/bootstrap verification belongs with the service repo that owns the runtime behavior, not the root orchestration repo.
-- `registrar` owns a local-only PostgreSQL bootstrap smoke artifact; a canonical executable bootstrap command remains migration hardening debt until checked in.
+- `registrar` owns a local-only PostgreSQL bootstrap smoke artifact. The canonical schema bootstrap is Flyway migration `V003__core_schema.sql` (see `docs/DOCKER.md` → Schema ownership); `init_db()`/`create_all()` remains SQLite-only for test fixtures.
 
 ## Release Evidence
 

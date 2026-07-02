@@ -12,10 +12,9 @@
 #   make validate
 
 COMPOSE_BASE := docker-compose.yml
-COMPOSE_OBS  := $(shell test -f docker-compose.observability.yml && echo -f docker-compose.observability.yml)
 PROFILE_FLAG := $(shell test -n "$$COMPOSE_PROFILES" && echo -f docker-compose.$$COMPOSE_PROFILES.yml)
 
-DC := docker compose $(PROFILE_FLAG) $(COMPOSE_OBS)
+DC := docker compose -f $(COMPOSE_BASE) $(PROFILE_FLAG)
 
 .DEFAULT_GOAL := help
 
