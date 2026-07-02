@@ -10,9 +10,8 @@ if ($env:COMPOSE_PROFILES -and (Test-Path "docker-compose.$($env:COMPOSE_PROFILE
 }
 if (Test-Path "docker-compose.observability.yml") { $ComposeFiles += "-f", "docker-compose.observability.yml" }
 
-# Postgres container name comes from docker-compose.yml: ccs-postgres (we override
-# to the project-prefixed name produced by docker compose v2).
-$PGContainer = if ($env:PG_CONTAINER) { $env:PG_CONTAINER } else { "account-creation-postgres-1" }
+# Postgres container name comes from docker-compose.yml (container_name: postgres).
+$PGContainer = if ($env:PG_CONTAINER) { $env:PG_CONTAINER } else { "postgres" }
 $DbName = if ($env:DB_NAME) { $env:DB_NAME } else { "account_creator" }
 $DbUser = if ($env:DB_USER) { $env:DB_USER } else { "ccs" }
 $OutDir = if ($env:BACKUP_DIR) { $env:BACKUP_DIR } else { (Join-Path $Root "backups\postgres") }

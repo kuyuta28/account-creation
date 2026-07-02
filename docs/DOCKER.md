@@ -17,6 +17,10 @@ scope unless you request more.
 | Tail logs | `pwsh scripts/docker-logs.ps1 200 mail-service` |
 | Stop stack | `pwsh scripts/docker-down.ps1` |
 | Stop + drop Postgres volume | `pwsh -Command "$env:PRUNE_VOLUMES='1'; & scripts/docker-down.ps1"` |
+| Backup Postgres now | `pwsh scripts/postgres-backup.ps1` |
+| Restore Postgres | `pwsh scripts/postgres-restore.ps1 backups\postgres\<dump>.dump --yes` |
+| Install daily backup schedule | `pwsh scripts/postgres-backup-schedule.ps1` |
+| Remove daily backup schedule | `pwsh scripts/postgres-backup-schedule.ps1 -Uninstall` |
 | Validate compose file | `docker compose -f docker-compose.yml config` |
 | GUI debug registrar (Windows host) | `docker compose -f docker-compose.yml -f docker-compose.dev.yml up registrar` |
 
@@ -68,6 +72,32 @@ explode the index (one stream per request). Query it at read time:
 
 Query in Grafana (`http://localhost:3000` → Explore → Loki). Start only the
 logging stack: `docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d loki alloy grafana`.
+
+## Backups
+
+`scripts/postgres-backup.ps1` takes a compressed `pg_dump` (custom format) from
+the running `postgres` container into `backups/postgres/`, verifies the archive
+with `pg_restore -l`, then prunes dumps older than `BACKUP_RETAIN_DAYS`
+(default 14). Restore with `scripts/postgres-restore.ps1 <dump> --yes` (it
+drops + recreates the DB, so stop dependent services first).
+
+**Daily schedule (Windows Task Scheduler):** one-time install, runs unattended:
+
+```powershell
+pwsh scripts/postgres-backup-schedule.ps1                 # install, daily 03:07
+pwsh scripts/postgres-backup-schedule.ps1 -Uninstall      # remove
+Start-ScheduledTask -TaskName account-creation-pg-backup  # test now
+```
+
+Defaults: task `account-creation-pg-backup`, daily at `03:07`, runs as the
+interactive user. Override with `BACKUP_TASK_TIME` / `BACKUP_TASK_NAME` env
+vars before installing. Test it fired: check `backups/postgres/` for a fresh
+`pgdump-*.dump`.
+
+Backups land on the same disk as the stack — fine for accidental-delete /
+bad-migration recovery. For disk-failure survival, periodically copy
+`backups/postgres/` to a second disk or cloud (rclone/robocopy); that is left
+to the operator, not automated here.
 
 ## Scope & decisions (local = prod)
 

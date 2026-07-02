@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $Root
 
-$PGContainer = if ($env:PG_CONTAINER) { $env:PG_CONTAINER } else { "account-creation-postgres-1" }
+$PGContainer = if ($env:PG_CONTAINER) { $env:PG_CONTAINER } else { "postgres" }
 $DbName = if ($env:DB_NAME) { $env:DB_NAME } else { "account_creator" }
 $DbUser = if ($env:DB_USER) { $env:DB_USER } else { "ccs" }
 
