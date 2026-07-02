@@ -6,14 +6,12 @@
 set -euo pipefail
 
 TIMEOUT="${1:-120}"
-COMPOSE_BASE="docker-compose.yml"
-COMPOSE_OBS=""
+COMPOSE_BASE="-f docker-compose.yml"
 PROFILE_FLAG=""
 
-[ -f docker-compose.observability.yml ] && COMPOSE_OBS="-f docker-compose.observability.yml"
 [ -n "${COMPOSE_PROFILES:-}" ] && PROFILE_FLAG="-f docker-compose.${COMPOSE_PROFILES}.yml"
 
-DC=(docker compose $PROFILE_FLAG $COMPOSE_OBS)
+DC=(docker compose $COMPOSE_BASE $PROFILE_FLAG)
 
 mapfile -t services < <("${DC[@]}" config --services)
 echo "[wait-healthy] ${#services[@]} service(s); timeout=${TIMEOUT}s"

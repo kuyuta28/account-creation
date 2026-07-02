@@ -1,26 +1,27 @@
-# docker-compose.dev.yml — dev overlay: bind-mount code, no rebuild.
+# Dev overlay: bind-mount source code, disable auto-restart, expose Vite HMR.
 #
-# Dùng:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 #
-# Khác biệt so với prod:
-#   - Bind-mount source code → edit → restart container (< 1s), KHÔNG build image
-#   - Bind-mount 9router DB read-only → admin UI thấy key thật từ host
-#   - web-ui dùng Vite dev server (port 1421 hot reload) thay vì nginx
-#   - restart: no ở app services → dev muốn thấy crash, không tự restart vô tận
-#
-# Mount paths cho 9router DB (Windows host, WSL2 backend):
-#   Host: C:\Users\admin\AppData\Roaming\9router\ → Container: /mnt/9router
-#   Tự động detect platform. Nếu dùng Mac/Linux host, đổi sang ~/.local/share/9router/.
+# Optional GUI debug for registrar (Windows host + Docker Desktop/WSL2):
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up registrar
+# Requires a local X server (VcXsrv/MobaXterm) and host firewall allow.
 
 services:
   registrar:
     volumes:
-      # Override prod volume → bind-mount code cho hot reload
       - ./registrar/src:/app/src
       - ./registrar/main.py:/app/main.py
       - ./registrar/run_api.py:/app/run_api.py
       - ./common/src:/app/common/src
       - ./registrar/config:/app/config:ro
+      # Camoufox cache from host; override to :rw if the service must write profiles.
+      - ${LOCALAPPDATA_POSIX:-/c/Users/admin/AppData/Local}/camoufox:/app/.cache/camoufox:ro
+      # GUI debug only: forward host X11 socket. Unset CAMOUFOX_HEADLESS in config.yaml to use.
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    environment:
+      DISPLAY: host.docker.internal:0
+      CAMOUFOX_HEADLESS: "0"
     restart: "no"
 
   mail-service:
@@ -29,6 +30,7 @@ services:
       - ./mail-service/main.py:/app/main.py
       - ./common/src:/app/common/src
       - ./mail-service/config:/app/config:ro
+      - ${LOCALAPPDATA_POSIX:-/c/Users/admin/AppData/Local}/camoufox:/app/.cache/camoufox:ro
     restart: "no"
 
   aa-proxy:
@@ -37,6 +39,7 @@ services:
       - ./aa-proxy/main.py:/app/main.py
       - ./common/src:/app/common/src
       - ./aa-proxy/config:/app/config:ro
+      - ${LOCALAPPDATA_POSIX:-/c/Users/admin/AppData/Local}/camoufox:/app/.cache/camoufox:ro
     restart: "no"
 
   tts-proxy:
@@ -45,22 +48,25 @@ services:
       - ./tts-proxy/main.py:/app/main.py
       - ./common/src:/app/common/src
       - ./tts-proxy/config:/app/config:ro
-      # 9router DB (host Windows: C:\Users\admin\AppData\Roaming\9router)
-      # WSL2 tự động expose %APPDATA% dưới /mnt/c/Users/admin/AppData/Roaming/
       - ${NINE_ROUTER_HOST_DIR:-/c/Users/admin/AppData/Roaming/9router}:/mnt/9router:ro
     environment:
       NINE_ROUTER_DB: /mnt/9router/db/data.sqlite
     restart: "no"
 
   web-ui:
-    # Skip image build entirely; chạy Vite dev server trực tiếp từ host
     build: !reset null
     image: node:20-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
     working_dir: /app
     command: ["sh", "-c", "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0 --port 80"]
     volumes:
       - ./web-ui:/app
-      - /app/node_modules   # tránh conflict bind-mount với container's node_modules
+      - /app/node_modules
     ports:
       - "1421:80"
     environment:

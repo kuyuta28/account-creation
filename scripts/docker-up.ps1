@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $Root
@@ -8,28 +8,25 @@ $ComposeFiles = @("-f", "docker-compose.yml")
 if ($env:COMPOSE_PROFILES -and (Test-Path "docker-compose.$($env:COMPOSE_PROFILES).yml")) {
     $ComposeFiles += "-f", "docker-compose.$($env:COMPOSE_PROFILES).yml"
 }
-if (Test-Path "docker-compose.observability.yml") { $ComposeFiles += "-f", "docker-compose.observability.yml" }
 $MigrationsFile = "docker-compose.migrations.yml"
 $HasMigrations = Test-Path $MigrationsFile
 
 function Invoke-Dc {
     param([Parameter(ValueFromRemainingArguments=$true)][string[]]$Args)
     Write-Host "> docker compose $($ComposeFiles -join ' ') $($Args -join ' ')"
-    docker compose @ComposeFiles @Args
+    & docker compose @ComposeFiles @Args 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "docker compose $($Args -join ' ') failed ($LASTEXITCODE)" }
 }
 
 # 1. Bring up Postgres + dependencies first so migrations can run.
 Write-Host "[up] phase 1: starting dependencies (postgres + traefik)..."
-Invoke-Dc up -d --remove-orphans postgres traefik
+Invoke-Dc -- up -d --remove-orphans postgres traefik
 
 if ($HasMigrations) {
     # 2. Run migrations (one-shot Flyway container).
     Write-Host "[up] phase 2: running migrations..."
     $AllFiles = $ComposeFiles + @("-f", $MigrationsFile)
-    $flywayArgs = @("run", "--rm", "flyway")
-    Write-Host "> docker compose $($AllFiles -join ' ') $($flywayArgs -join ' ')"
-    docker compose @AllFiles @flywayArgs
+    & docker compose @AllFiles run --rm flyway 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "migrations failed (exit $LASTEXITCODE). Stack left half-up; run \`docker compose down\` and inspect."
     }
@@ -39,7 +36,7 @@ if ($HasMigrations) {
 
 # 3. Bring up the rest.
 Write-Host "[up] phase 3: starting app services..."
-Invoke-Dc up -d --remove-orphans
+Invoke-Dc -- up -d --remove-orphans
 
 # 4. Wait for healthchecks.
 Write-Host "[up] phase 4: waiting for healthchecks..."
@@ -58,4 +55,4 @@ foreach ($svc in $Services) {
 }
 
 Write-Host "[up] status:"
-Invoke-Dc ps
+Invoke-Dc -- ps

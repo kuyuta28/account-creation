@@ -9,21 +9,39 @@ on:
       - docker-compose.yml
       - docker-compose.prod.yml
       - docker-compose.staging.yml
+      - docker-compose.dev.yml
+      - docker-compose.observability.yml
       - .dockerignore
       - .github/workflows/docker-build.yml
       - scripts/docker-*.ps1
       - scripts/wait-healthy.sh
       - Makefile
+      - '**/Dockerfile'
+      - '**/pyproject.toml'
+      - common/**
+      - web-ui/**
+      - traefik/**
+      - observability/**
+      - migrations/**
   pull_request:
     paths:
       - docker-compose.yml
       - docker-compose.prod.yml
       - docker-compose.staging.yml
+      - docker-compose.dev.yml
+      - docker-compose.observability.yml
       - .dockerignore
       - .github/workflows/docker-build.yml
       - scripts/docker-*.ps1
       - scripts/wait-healthy.sh
       - Makefile
+      - '**/Dockerfile'
+      - '**/pyproject.toml'
+      - common/**
+      - web-ui/**
+      - traefik/**
+      - observability/**
+      - migrations/**
 
 jobs:
   validate-compose:
@@ -48,6 +66,8 @@ jobs:
         run: docker compose -f docker-compose.yml -f docker-compose.prod.yml config > /dev/null
       - name: Validate staging overlay
         run: docker compose -f docker-compose.yml -f docker-compose.staging.yml config > /dev/null
+      - name: Validate dev overlay
+        run: docker compose -f docker-compose.yml -f docker-compose.dev.yml config > /dev/null
       - name: Validate observability overlay
         run: |
           if [ -f docker-compose.observability.yml ]; then
@@ -115,6 +135,7 @@ jobs:
             SERVICE_VERSION=ci-${{ github.sha }}
             BUILD_DATE=${{ github.event.repository.updated_at }}
             VCS_REF=${{ github.sha }}
+            CAMOUFOX_CACHE_PATH=${{ secrets.CAMOUFOX_CACHE_PATH || '' }}
       - name: Inspect OCI labels
         run: |
           docker inspect account-creation/${{ matrix.service.name }}:ci \
@@ -157,7 +178,7 @@ jobs:
         with:
           image-ref: account-creation/${{ matrix.service }}:ci
           format: 'table'
-          exit-code: '0'        # don't fail the build on findings; surface as job summary instead
+          exit-code: '0'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
@@ -191,3 +212,4 @@ jobs:
       - name: Tear down
         if: always()
         run: pwsh scripts/docker-down.ps1
+
