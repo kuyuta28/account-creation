@@ -79,6 +79,7 @@ http:
   routers:
     mail:
       rule: "PathPrefix(`/mail/`)"
+      priority: 50
       service: mail-service
       middlewares:
         - strip-mail
@@ -86,6 +87,7 @@ http:
         - retry-safe
     tts:
       rule: "PathPrefix(`/tts/`)"
+      priority: 50
       service: tts-proxy
       middlewares:
         - strip-tts
@@ -93,6 +95,7 @@ http:
         - retry-safe
     aa:
       rule: "PathPrefix(`/aa/`)"
+      priority: 50
       service: aa-proxy
       middlewares:
         - strip-aa
@@ -100,6 +103,7 @@ http:
         - retry-safe
     web-ui:
       rule: "PathPrefix(`/`)"
+      priority: 1
       service: web-ui
       middlewares:
         - rate-limit-public
@@ -107,6 +111,7 @@ http:
 
     api:
       rule: "PathPrefix(`/api/v1`)"
+      priority: 100
       service: registrar
       middlewares:
         - rate-limit-api
@@ -134,4 +139,5 @@ http:
       loadBalancer:
         servers:
           - url: "http://registrar:8709"
+
 
