@@ -74,10 +74,22 @@ def test_postgres_backed_services_wait_for_postgres_health():
         assert "condition: service_healthy" in block
 
 
-def test_postgres_internal_network_is_isolated():
+def test_postgres_single_shared_network():
+    """Local=prod: one flat account-net, no internal isolation network.
+    Host is trusted and must reach Postgres (host-browser-agent). An
+    internal:true network would block the 127.0.0.1:5432 port-publish."""
     source = COMPOSE.read_text(encoding="utf-8")
-    assert "postgres-internal:" in source
-    assert "internal: true" in source
+    assert "postgres-internal" not in source, "postgres-internal network removed (local=prod)"
+    assert "internal: true" not in source, "no internal:true network (host must reach DB)"
+
+
+def test_all_ports_bound_to_loopback():
+    """No port should bind 0.0.0.0 — single-user local box, no LAN exposure."""
+    import re
+    source = COMPOSE.read_text(encoding="utf-8")
+    # match port mappings like  - "127.0.0.1:NN:NN"  or  - "NN:NN"
+    bad = re.findall(r'-\s*"(\d+:\d+)"', source)
+    assert not bad, f"ports bound to all interfaces (should be 127.0.0.1): {bad}"
 
 
 def test_web_ui_healthcheck_uses_internal_port_80():

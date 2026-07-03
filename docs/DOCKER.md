@@ -21,6 +21,7 @@ scope unless you request more.
 | Restore Postgres | `pwsh scripts/postgres-restore.ps1 backups\postgres\<dump>.dump --yes` |
 | Install daily backup schedule | `pwsh scripts/postgres-backup-schedule.ps1` |
 | Remove daily backup schedule | `pwsh scripts/postgres-backup-schedule.ps1 -Uninstall` |
+| Start host browser agent | `py registrar\tools\host_browser_agent.py` (see Host browser agent) |
 | Validate compose file | `docker compose -f docker-compose.yml config` |
 | GUI debug registrar (Windows host) | `docker compose -f docker-compose.yml -f docker-compose.dev.yml up registrar` |
 
@@ -40,7 +41,8 @@ Profiles:
 - **tts-proxy** `:8700` — Gemini TTS proxy, reads 9router DB from host.
 - **web-ui** — static SPA served by nginx on internal port `8080`; Traefik routes `/` to it.
 
-All services connect to Postgres via the isolated `postgres-internal` bridge.
+All services share one flat `account-net` bridge; Postgres also publishes
+`127.0.0.1:5432` so host-native tools (host-browser-agent) can reach it.
 Dev DSN defaults to `postgresql+asyncpg://ccs:ccs_dev_only@postgres:5432/account_creator`.
 
 ## Central logging
@@ -99,6 +101,49 @@ bad-migration recovery. For disk-failure survival, periodically copy
 `backups/postgres/` to a second disk or cloud (rclone/robocopy); that is left
 to the operator, not automated here.
 
+## Host browser agent (open real browser window)
+
+The "open browser" feature (Gmail mailbox / account with a saved session) needs
+a **visible** Camoufox window on the desktop. Containers run headless, so this
+is delegated to a tiny daemon running **native on the host**, not in Docker:
+
+- **Agent** — `registrar/tools/host_browser_agent.py`, FastAPI on
+  `127.0.0.1:9999`. Receives `POST /open {service, email, url?}` and spawns
+  `open_browser_session.py` as a subprocess with `headless=False`.
+- **Subprocess** — `registrar/src/api/tools/open_browser_session.py` loads the
+  saved `session_state` / `google_auth_state` from Postgres, launches Camoufox
+  with `storage_state`, navigates to the service URL, and waits for the user
+  to close the window.
+- **Registrar** (in Docker) forwards the request to the agent via
+  `HOST_BROWSER_AGENT_URL=http://host.docker.internal:9999`.
+
+One-time setup on the host (host needs `camoufox`, `fastapi`, `uvicorn`,
+`screeninfo` installed in the host Python):
+
+```powershell
+# 1. .env already sets HOST_BROWSER_AGENT_URL=http://host.docker.internal:9999
+# 2. Start the agent (host DB DSN uses 127.0.0.1, NOT the docker service name):
+$env:DATABASE_URL = "postgresql+asyncpg://ccs:ccs_dev_only@127.0.0.1:5432/account_creator"
+$env:PYTHONPATH   = "D:\business\account-creation\registrar;D:\business\account-creation\common\src"
+py registrar\tools\host_browser_agent.py
+```
+
+Verify: `curl http://127.0.0.1:9999/health` → `{"status":"ok"}`. Then in the
+web UI, open a Gmail mailbox that has a session and click the open-browser
+action — a Camoufox window opens on the desktop, logged in via the saved
+session.
+
+**Why host-native, not in Docker:** a visible browser window needs the host
+desktop/display. The agent is a ~100-line forwarder; the real work is the
+subprocess talking to the host's Camoufox install. Keeping it out of Docker
+avoids X11/socket-forwarding complexity on Windows.
+
+**Prerequisite:** Postgres must publish `127.0.0.1:5432` and be reachable from
+the host (see Scope & decisions — Postgres is on `account-net` for this
+reason). If the agent logs `ConnectionRefusedError` on DB connect, the
+port-publish is blocked, usually because Postgres was put on an
+`internal: true` network only (local=prod: don't).
+
 ## Scope & decisions (local = prod)
 
 This stack is **single-machine, single-user, private-repo**. The local Windows
@@ -113,6 +158,13 @@ multi-node clustering, no cross-machine secret distribution. Therefore:
   overhead that only matters for multi-tenant or multi-node setups.
 - Rate limits exist to protect expensive registration endpoints, not for
   multi-tenant fairness; tune them to local single-user load, not prod scale.
+- **The host is trusted and must always reach the database.** Postgres is on
+  the single flat `account-net` (not internal), so the `127.0.0.1:5432`
+  port-publish works for both app containers and host-native tools
+  (host-browser-agent). Do NOT put Postgres on an `internal: true` network
+  only — that blocks host port-publish and breaks host-native tools that
+  connect to the DB directly. Network `internal: true` is a multi-tenant
+  hardening that has no place on a single-user local box.
 
 ### Schema ownership
 
@@ -184,7 +236,7 @@ To see the browser window:
 | Disk exhaustion | `mem_limit`, `pids_limit` per service |
 | Log rotation | json-file driver, 20 MB x 5 files per service |
 | Writable /tmp | `tmpfs` on every service that runs code |
-| DB isolation | `postgres-internal` network has `internal: true` |
+| DB isolation | Local=prod: one flat `account-net` (no `internal: true`); Postgres publishes `127.0.0.1:5432` so the host reaches it directly |
 | Health-gated startup | `depends_on: { postgres: { condition: service_healthy } }` |
 | Host exposure | All app ports bound to `127.0.0.1`; Traefik dashboard bound to `127.0.0.1:8080` in dev only |
 | Postgres data | Docker named volume; never bind-mount the data dir on Windows |
@@ -192,8 +244,8 @@ To see the browser window:
 ## Migrations
 
 `docker-compose.migrations.yml` runs Flyway as a one-shot job before app
-services start. The app services still call SQLAlchemy `create_all()` on boot
-for application tables.
+services start. Runtime services call `init_async_db()` (engine/session only),
+never `create_all()` — Flyway owns the schema.
 
 ```powershell
 pwsh scripts/docker-up.ps1   # migrations run automatically

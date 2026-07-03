@@ -2,10 +2,6 @@ networks:
   account-net:
     name: account-net
     driver: bridge
-  postgres-internal:
-    name: postgres-internal
-    driver: bridge
-    internal: true
 
 services:
   postgres:
@@ -47,7 +43,7 @@ services:
         max-size: "20m"
         max-file: "5"
     networks:
-      - postgres-internal
+      - account-net
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -67,7 +63,7 @@ services:
     networks:
       - account-net
     ports:
-      - "80:80"
+      - "127.0.0.1:80:80"
       - "127.0.0.1:8080:8080"
     volumes:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
@@ -92,7 +88,6 @@ services:
       - /tmp:size=256m,mode=1777
     networks:
       - account-net
-      - postgres-internal
     ports:
       - "127.0.0.1:8702:8702"
     environment:
@@ -133,7 +128,6 @@ services:
       - /tmp:size=256m,mode=1777
     networks:
       - account-net
-      - postgres-internal
     ports:
       - "127.0.0.1:8701:8701"
     environment:
@@ -174,7 +168,6 @@ services:
       - /tmp:size=2g,mode=1777
     networks:
       - account-net
-      - postgres-internal
     ports:
       - "127.0.0.1:8709:8709"
     environment:
@@ -184,6 +177,7 @@ services:
       REGISTRAR_HOST: 0.0.0.0
       REGISTRAR_PORT: 8709
       DATABASE_URL: ${DATABASE_URL}
+      HOST_BROWSER_AGENT_URL: ${HOST_BROWSER_AGENT_URL:-}
       # ponytail: headless is enforced via config in container. Use dev overlay for GUI debug on Windows.
       CAMOUFOX_HEADLESS: "1"
     healthcheck:
@@ -220,7 +214,6 @@ services:
       - /tmp:size=128m,mode=1777
     networks:
       - account-net
-      - postgres-internal
     ports:
       - "127.0.0.1:8700:8700"
     environment:
