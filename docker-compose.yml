@@ -178,6 +178,8 @@ services:
       REGISTRAR_PORT: 8709
       DATABASE_URL: ${DATABASE_URL}
       HOST_BROWSER_AGENT_URL: ${HOST_BROWSER_AGENT_URL:-}
+      NINEROUTER_PASSWORD: ${NINEROUTER_PASSWORD:-}
+      TWOCAPTCHA_API_KEY: ${TWOCAPTCHA_API_KEY:-}
       # ponytail: headless is enforced via config in container. Use dev overlay for GUI debug on Windows.
       CAMOUFOX_HEADLESS: "1"
     healthcheck:
@@ -194,7 +196,7 @@ services:
       - ./registrar/logs:/app/logs
       - ./registrar/debug:/app/debug
       - ./registrar/screenshots:/app/screenshots
-      - ./registrar/config:/app/config:ro
+      - ./registrar/config:/app/config
       - ${LOCALAPPDATA_POSIX:-/c/Users/admin/AppData/Local}/camoufox:/app/.cache/camoufox:rw
 
   tts-proxy:

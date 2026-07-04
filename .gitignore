@@ -1,13 +1,7 @@
 # Root orchestration repo only.
-# Service source code lives in independent repos and should not appear as root changes.
-aa-proxy/
-common/
-desktop-ui/
-web-ui/
-mail-service/
-registrar/
-tts-proxy/
-content-vault/
+# Service source code lives in independent repos, tracked as git submodules
+# (see .gitmodules). Do NOT ignore them — submodule gitlinks need the paths visible.
+# Local-only service working trees (uncommitted edits) remain inside each submodule.
 
 # Local runtime data and backups
 data/

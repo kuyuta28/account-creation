@@ -1,0 +1,28 @@
+[submodule "registrar"]
+	path = registrar
+	url = https://github.com/kuyuta28/account-creation-registrar.git
+	branch = main
+[submodule "common"]
+	path = common
+	url = https://github.com/kuyuta28/account-creation-common.git
+	branch = master
+[submodule "aa-proxy"]
+	path = aa-proxy
+	url = https://github.com/kuyuta28/account-creation-aa-proxy.git
+	branch = master
+[submodule "mail-service"]
+	path = mail-service
+	url = https://github.com/kuyuta28/account-creation-mail-service.git
+	branch = master
+[submodule "tts-proxy"]
+	path = tts-proxy
+	url = https://github.com/kuyuta28/account-creation-tts-proxy.git
+	branch = master
+[submodule "web-ui"]
+	path = web-ui
+	url = https://github.com/kuyuta28/account-creation-desktop-ui.git
+	branch = master
+[submodule "content-vault"]
+	path = content-vault
+	url = https://github.com/kuyuta28/account-creation-content-vault.git
+	branch = main
