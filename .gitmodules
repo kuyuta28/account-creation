@@ -5,23 +5,23 @@
 [submodule "common"]
 	path = common
 	url = https://github.com/kuyuta28/account-creation-common.git
-	branch = master
+	branch = main
 [submodule "aa-proxy"]
 	path = aa-proxy
 	url = https://github.com/kuyuta28/account-creation-aa-proxy.git
-	branch = master
+	branch = main
 [submodule "mail-service"]
 	path = mail-service
 	url = https://github.com/kuyuta28/account-creation-mail-service.git
-	branch = master
+	branch = main
 [submodule "tts-proxy"]
 	path = tts-proxy
 	url = https://github.com/kuyuta28/account-creation-tts-proxy.git
-	branch = master
+	branch = main
 [submodule "web-ui"]
 	path = web-ui
 	url = https://github.com/kuyuta28/account-creation-desktop-ui.git
-	branch = master
+	branch = main
 [submodule "content-vault"]
 	path = content-vault
 	url = https://github.com/kuyuta28/account-creation-content-vault.git
