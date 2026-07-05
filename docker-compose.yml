@@ -172,7 +172,7 @@ services:
       REGISTRAR_HOST: 0.0.0.0
       REGISTRAR_PORT: 8709
       DATABASE_URL: ${DATABASE_URL}
-      HOST_BROWSER_AGENT_URL: ${HOST_BROWSER_AGENT_URL:-}
+      HOST_BROWSER_AGENT_URL: ${HOST_BROWSER_AGENT_URL:-http://host.docker.internal:9999}
       NINEROUTER_PASSWORD: ${NINEROUTER_PASSWORD:-}
       TWOCAPTCHA_API_KEY: ${TWOCAPTCHA_API_KEY:-}
       # ponytail: headless is enforced via config in container. Use dev overlay for GUI debug on Windows.
