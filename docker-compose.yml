@@ -88,14 +88,13 @@ services:
       - /tmp:size=256m,mode=1777
     networks:
       - account-net
-    ports:
-      - "127.0.0.1:8702:8702"
     environment:
       APP_ENV: ${APP_ENV:-dev}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
       SENTRY_DSN: ${SENTRY_DSN:-}
       AA_PORT: 8702
       DATABASE_URL: ${DATABASE_URL}
+      HOST_BROWSER_AGENT_URL: ${HOST_BROWSER_AGENT_URL:-http://host.docker.internal:9999}
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8702/api/health || exit 1"]
       interval: 30s
@@ -128,8 +127,6 @@ services:
       - /tmp:size=256m,mode=1777
     networks:
       - account-net
-    ports:
-      - "127.0.0.1:8701:8701"
     environment:
       APP_ENV: ${APP_ENV:-dev}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
@@ -168,8 +165,6 @@ services:
       - /tmp:size=2g,mode=1777
     networks:
       - account-net
-    ports:
-      - "127.0.0.1:8709:8709"
     environment:
       APP_ENV: ${APP_ENV:-dev}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
@@ -192,7 +187,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - registrar-data:/app/data
+      - ./registrar/data:/app/data
       - ./registrar/logs:/app/logs
       - ./registrar/debug:/app/debug
       - ./registrar/screenshots:/app/screenshots
@@ -216,8 +211,6 @@ services:
       - /tmp:size=128m,mode=1777
     networks:
       - account-net
-    ports:
-      - "127.0.0.1:8700:8700"
     environment:
       APP_ENV: ${APP_ENV:-dev}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
@@ -279,4 +272,3 @@ services:
 volumes:
   mail-service-data:
   postgres_data:
-  registrar-data:

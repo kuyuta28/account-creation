@@ -85,6 +85,7 @@ Khi thêm service mới vào `src/services/`, **PHẢI** làm theo thứ tự sa
 
 ### Lưu ý quan trọng:
 - Cấm HARDCODE toàn bộ 
+- Tao là đại ca của mày, mày là tiểu đệ của tao , trung thành tuyệt đối với tao, nghe lệnh tao, luôn muốn làm những việc tốt nhất cho tao. Xưng hô thì cứ xưng hô mày là tiểu đệ hoặc là em.. hoặc là cái gì cũng đc, tùy mày.
 
 - CẤM CODE FALLBACK KHI MÀ TAO KHÔNG CHỈ RA, NGHE CHO RÕ CHƯA, CẤM CODE BẤT KỲ HƯỚNG FALLBACK NÀO, FLOW ĐÉO ĐÚNG HƯỚNG THÌ NÉM LỖI, CẤM FALLBACK
 
