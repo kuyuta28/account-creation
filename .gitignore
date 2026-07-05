@@ -18,6 +18,11 @@ __pycache__/
 *.pyc
 config/sops-age-key.txt
 
+# Secrets — .env chỉ là local dev shim, never track
+.env
+.env.*
+!.env.example
+
 # Playwright MCP cache. Created by the chrome-devtools-mcp tool on every
 # browser session; safe to delete, will be regenerated on next run.
 .playwright-mcp/
