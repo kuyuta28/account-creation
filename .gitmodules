@@ -26,3 +26,6 @@
 	path = content-vault
 	url = https://github.com/kuyuta28/account-creation-content-vault.git
 	branch = main
+[submodule "chatgpt2api"]
+	path = chatgpt2api
+	url = https://github.com/kuyuta28/chatgpt2api.git
